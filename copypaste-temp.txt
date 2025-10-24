@@ -1,0 +1,10 @@
+/
+├── definitions/
+│   ├── 01_bronze/
+│   │   └── ga4/
+│   ├── 02_silver/
+│   │   └── ga4/
+│   ├── 03_gold/
+│   └── assertions/
+│       └── ga4/
+└── README.md
