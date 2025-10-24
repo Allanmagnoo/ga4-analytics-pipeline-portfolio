@@ -1,0 +1,15 @@
+# Dataform
+node_modules/
+.df-credentials.json
+.dfcache/
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/

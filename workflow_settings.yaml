@@ -1,0 +1,19 @@
+defaultProject: datascience-473223
+defaultDataset: dataform
+defaultAssertionDataset: qa_assertions
+defaultLocation: US
+dataformCoreVersion: 3.0.26
+
+vars:
+# GA4
+ga4_ecommerce_dataset_raw: "analytics_XXXXXXXXX"
+bronze_ga4_bq: "brz_ga4"
+silver_ga4_bq: "slv_ga4"
+
+# Google Ads
+gads_dataset_raw: "bronze_gads"
+bronze_gads_bq: "brz_gads"
+silver_gads_bq: "slv_gads"
+
+# Configurações
+incremental_window_days: "7"
