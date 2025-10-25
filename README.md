@@ -48,5 +48,5 @@ O repositório segue a estrutura padrão do Dataform para organização e clarez
 
 ---
 
-**Autor:** [Seu Nome Completo]
-**LinkedIn:** [Link para seu perfil no LinkedIn]
+**Autor:** Allan Magno
+
