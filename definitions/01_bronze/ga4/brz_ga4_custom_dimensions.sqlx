@@ -1,5 +1,5 @@
 -- Arquivo: definitions/01_bronze/ga4/brz_ga4_custom_dimensions.sqlx
-
+--teste
 config {
     type: "table",
     schema: "brz_ga4",

@@ -8,3 +8,5 @@ declare({
   schema: "brz_ga4",
   name: "raw_ga_sessions"
 });
+
+//teste

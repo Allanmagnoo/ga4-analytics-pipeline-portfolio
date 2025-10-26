@@ -32,3 +32,4 @@ FROM
 WHERE
   h.type = 'PAGE'
   -- Filtra para ter uma linha por pageview
+  --teste

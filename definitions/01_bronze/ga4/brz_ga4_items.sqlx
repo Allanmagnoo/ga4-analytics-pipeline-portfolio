@@ -25,3 +25,5 @@ FROM
     UNNEST(hits) AS h,
     UNNEST(h.product) AS p
 WHERE h.transaction.transactionId IS NOT NULL
+
+  --teste
