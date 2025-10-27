@@ -5,8 +5,12 @@
 // como uma fonte de dados oficial para o nosso projeto Dataform.
 
 declare({
-  schema: "brz_ga4",
-  name: "raw_ga_sessions"
+    schema: "brz_ga4",
+    name: "raw_ga_sessions"
 });
 
-//teste
+// 2. Declara a tabela de clientes brutos do CRM
+declare({
+  schema: "brz_crm", // O schema do seu sistema de CRM
+  name: "raw_customers"
+});

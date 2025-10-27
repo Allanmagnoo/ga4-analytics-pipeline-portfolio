@@ -1,0 +1,28 @@
+-- Arquivo: definitions/01_bronze/crm/brz_crm_customers.sqlx
+
+config {
+    type: "table",
+    schema: "brz_crm",
+    tags: ["bronze", "crm"]
+}
+
+SELECT
+    ID AS customer_id,
+    Year_Birth AS birth_year,
+    Education AS education_level,
+    Marital_Status AS marital_status,
+    Income AS annual_income,
+    Kidhome AS kids_at_home,
+    Teenhome AS teens_at_home,
+    PARSE_DATE('%d-%m-%Y', Dt_Customer) AS customer_since_date,
+    Recency AS days_since_last_purchase,
+    MntWines AS amount_spent_wine,
+    -- ... (adicione outras colunas que julgar importantes) ...
+    AcceptedCmp1 AS accepted_campaign_1,
+    AcceptedCmp2 AS accepted_campaign_2,
+    AcceptedCmp3 AS accepted_campaign_3,
+    AcceptedCmp4 AS accepted_campaign_4,
+    AcceptedCmp5 AS accepted_campaign_5,
+    Response AS accepted_last_campaign
+FROM
+    ${ref("raw_customers")}
