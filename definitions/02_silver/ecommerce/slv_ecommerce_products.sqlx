@@ -1,0 +1,20 @@
+config {
+    type: "table",
+    schema: dataform.projectConfig.vars.silver_ecommerce_bq,
+    tags: ["silver", "ecommerce", "products"]
+}
+
+SELECT
+  id AS product_id,
+  cost,
+  retail_price,
+  UPPER(category) AS category,
+  name AS product_name,
+  brand,
+  department,
+  SAFE_DIVIDE((retail_price - cost), cost) * 100 AS margem_percentual
+FROM
+  ${ref("brz_ecommerce_products")}
+WHERE
+  cost IS NOT NULL
+  AND cost > 0
