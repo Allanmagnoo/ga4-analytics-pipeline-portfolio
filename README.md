@@ -65,7 +65,14 @@ O repositório segue a estrutura padrão do Dataform para organização e clarez
 | | `metricas_mensais_categoria` | ⬜ A Fazer |
 | | `top_produtos` | ⬜ A Fazer |
 
-**Cálculo de Idade Dinâmica:** A tarefa pedia para calcular a idade a partir de age ou data de nascimento. A tabela de origem (users) continha apenas a coluna age, que é um valor estático e se torna obsoleto com o tempo. Para entregar um dado mais valioso e preciso, optei por implementar uma idade dinâmica estimada. Utilizando a data de criação do usuário (created_at) e sua idade no momento do cadastro (age), calculei uma data de nascimento estimada (DATE_SUB). A partir dela, criei a coluna idade_atual_estimada (DATE_DIFF), que se atualizará automaticamente com o tempo. Embora essa abordagem tenha uma margem de erro potencial de até um ano (devido à falta do dia/mês de nascimento), ela é significativamente mais precisa para análises de longo prazo do que usar a idade estática original.
+--- 
+
+## "Decisões Técnicas"
+
+**Cálculo de Idade Dinâmica:** 
+A tarefa pedia para calcular a idade a partir de age ou data de nascimento. A tabela de origem (users) continha apenas a coluna age, que é um valor estático e se torna obsoleto com o tempo. Para entregar um dado mais valioso e preciso, optei por implementar uma idade dinâmica estimada. Utilizando a data de criação do usuário (created_at) e sua idade no momento do cadastro (age), calculei uma data de nascimento estimada (DATE_SUB). A partir dela, criei a coluna idade_atual_estimada (DATE_DIFF), que se atualizará automaticamente com o tempo. Embora essa abordagem tenha uma margem de erro potencial de até um ano (devido à falta do dia/mês de nascimento), ela é significativamente mais precisa para análises de longo prazo do que usar a idade estática original.
+
+
 
 **Autor:** Allan Magno
 
