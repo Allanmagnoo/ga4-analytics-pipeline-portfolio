@@ -67,10 +67,21 @@ O repositório segue a estrutura padrão do Dataform para organização e clarez
 
 --- 
 
-## "Decisões Técnicas"
 
-**Cálculo de Idade Dinâmica:** 
-A tarefa pedia para calcular a idade a partir de age ou data de nascimento. A tabela de origem (users) continha apenas a coluna age, que é um valor estático e se torna obsoleto com o tempo. Para entregar um dado mais valioso e preciso, optei por implementar uma idade dinâmica estimada. Utilizando a data de criação do usuário (created_at) e sua idade no momento do cadastro (age), calculei uma data de nascimento estimada (DATE_SUB). A partir dela, criei a coluna idade_atual_estimada (DATE_DIFF), que se atualizará automaticamente com o tempo. Embora essa abordagem tenha uma margem de erro potencial de até um ano (devido à falta do dia/mês de nascimento), ela é significativamente mais precisa para análises de longo prazo do que usar a idade estática original.
+## 📝 Decisões Técnicas e Raciocínio
+
+Durante a implementação, foram tomadas decisões de engenharia para aumentar a robustez e o valor de negócio do pipeline:
+
+1.  **Cálculo de Idade Estimada (Tabela `slv_ecommerce_users`):**
+    * **Problema:** A coluna `age` da fonte representa a idade do usuário no momento do cadastro, um dado estático que se torna obsoleto.
+    * **Solução:** Em vez de usar este dado estático, criei uma nova coluna, `idade_estimada_atual`. Ela é calculada dinamicamente somando a idade original ao número de anos que se passaram desde a data de criação da conta (`created_at`).
+    * **Valor:** Essa abordagem transforma um dado impreciso em uma métrica precisa e sempre atualizada, crucial para análises de segmentação de clientes por faixa etária.
+
+2.  **Cálculo do Valor do Item (Tabela `slv_ecommerce_order_items`):**
+    * **Problema:** O teste solicitava o cálculo de `sale_price * quantidade`, mas a tabela de origem `order_items` não possui uma coluna `quantidade`.
+    * **Solução:** Após análise da estrutura, a premissa adotada foi que cada linha na tabela representa um único item. Portanto, a `quantidade` implícita é 1, e o `valor_total_item` é igual ao próprio `sale_price`. Essa decisão foi documentada diretamente no código.
+
+---
 
 
 
