@@ -1,0 +1,39 @@
+config {
+    type: "table",
+    schema: dataform.projectConfig.vars.silver_ecommerce_bq,
+    tags: ["silver", "ecommerce", "order_items"]
+}
+
+  -- CTE para ranquear os itens e permitir a deduplicação
+WITH
+  ranked_items AS (
+  SELECT
+    *,
+    -- Se houver IDs duplicados, esta função nos permite pegar apenas o mais recente
+    ROW_NUMBER() OVER(PARTITION BY id ORDER BY data_ingestao DESC) AS rank_n
+  FROM
+    ${ref("brz_ecommerce_order_items")}
+  WHERE
+    -- Regra de negócio: Preço de venda deve ser válido e positivo
+    sale_price IS NOT NULL
+    AND sale_price > 0 )
+SELECT
+  id,
+  order_id,
+  user_id,
+  product_id,
+  inventory_item_id,
+  status,
+  created_at,
+  shipped_at,
+  delivered_at,
+  returned_at,
+  sale_price,
+  -- Decisão Técnica: A tabela original não possui campo 'quantidade'.
+  -- Assumimos que cada linha representa um único item (quantidade = 1).
+  sale_price AS valor_total_item
+FROM
+  ranked_items
+WHERE
+  -- A deduplicação acontece aqui, mantendo apenas o registro mais recente
+  rank_n = 1

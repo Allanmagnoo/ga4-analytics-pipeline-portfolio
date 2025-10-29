@@ -1,0 +1,31 @@
+config {
+    type: "table",
+    schema: dataform.projectConfig.vars.silver_ecommerce_bq,
+    tags: ["silver", "ecommerce", "orders"]
+}
+
+SELECT
+  order_id,
+  user_id,
+  status,
+  -- Converte o timestamp para uma data limpa
+  CAST(created_at AS DATE) AS data_pedido,
+  -- Extrai o ano e o mês da data do pedido
+  EXTRACT(YEAR
+FROM
+  created_at) AS ano_pedido,
+  EXTRACT(MONTH
+  FROM
+    created_at) AS mes_pedido,
+  -- Mantém as outras colunas relevantes
+  gender,
+  returned_at,
+  shipped_at,
+  num_of_item
+FROM
+  -- Lê da nossa tabela Bronze, não da fonte pública
+  ${ref("brz_ecommerce_orders")}
+WHERE
+  -- Aplica as regras de limpeza exigidas pelo teste
+  status != 'Cancelled'
+  AND order_id IS NOT NULL
