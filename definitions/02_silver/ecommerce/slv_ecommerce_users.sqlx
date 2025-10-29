@@ -1,0 +1,41 @@
+config {
+  type: "table",
+  schema: dataform.projectConfig.vars.silver_ecommerce_bq,
+  tags: ["silver", "ecommerce", "users"]
+}
+
+SELECT
+  id AS user_id,
+  first_name,
+  last_name,
+  email,
+  -- Coluna original, mantida para referência e auditoria
+  age AS idade_no_cadastro,
+  
+  -- Decisão Técnica: Implementação da Idade Dinâmica Estimada.
+  -- Passo 1: Estimar a data de nascimento subtraindo a 'age' da data de criação do usuário.
+  -- Ex: Se created_at é '2024-10-29' e age é 30, a data de nascimento estimada é '1994-10-29'.
+  DATE_SUB(CAST(created_at AS DATE), INTERVAL age YEAR) AS data_nascimento_estimada,
+
+  -- Passo 2: Calcular a idade atual dinamicamente a partir da data de nascimento estimada.
+  -- Esta coluna será sempre precisa (com a margem de erro de ~1 ano da estimativa).
+  DATE_DIFF(CURRENT_DATE(), DATE_SUB(CAST(created_at AS DATE), INTERVAL age YEAR), YEAR) AS idade_atual_estimada,
+
+  -- Padroniza o país para maiúsculas, garantindo consistência
+  UPPER(country) AS country,
+  city,
+  state,
+  postal_code,
+  created_at
+FROM
+  ${ref("brz_ecommerce_users")}
+WHERE
+  -- Aplica a regra de negócio para garantir a validade do e-mail.
+  email IS NOT NULL
+  AND email LIKE '%@%'
+  -- Adiciona um filtro de sanidade para o cálculo de idade
+  AND age > 0 
+  AND created_at IS NOT NULL
+
+
+  
