@@ -47,6 +47,23 @@ O repositório segue a estrutura padrão do Dataform para organização e clarez
 - `definitions/assertions/`: Scripts de testes de qualidade de dados.
 
 ---
+## 💻 Progresso do Projeto
+
+| Camada | Tabela / Tarefa | Status |
+| :--- | :--- | :--- |
+| **Setup** | Criação de Datasets (brz, slv, gld, qa) | ✅ Concluído |
+| | Declaração de Fontes (`sources.js`) | ✅ Concluído |
+| **Bronze**| `brz_ecommerce_orders` | ✅ Concluído |
+| | `brz_ecommerce_order_items` | ✅ Concluído |
+| | `brz_ecommerce_products` | ✅ Concluído |
+| | `brz_ecommerce_users` | ✅ Concluído |
+| **Silver** | `slv_ecommerce_orders` | ✅ Concluído |
+| | `slv_ecommerce_order_items` | ✅ Concluído |
+| | `slv_ecommerce_products` | ⏳ Em Andamento |
+| | `slv_ecommerce_users` | ⬜ A Fazer |
+| **Gold** | `fato_vendas` | ⬜ A Fazer |
+| | `metricas_mensais_categoria` | ⬜ A Fazer |
+| | `top_produtos` | ⬜ A Fazer |
 
 **Autor:** Allan Magno
 
