@@ -11,6 +11,30 @@ declare({
 
 // 2. Declara a tabela de clientes brutos do CRM
 declare({
-  schema: "brz_crm", // O schema do seu sistema de CRM
-  name: "raw_customers"
+    schema: "brz_crm", // O schema do seu sistema de CRM
+    name: "raw_customers"
+});
+
+declare({
+    database: "bigquery-public-data",
+    schema: "thelook_ecommerce",
+    name: "orders"
+});
+
+declare({
+    database: "bigquery-public-data",
+    schema: "thelook_ecommerce",
+    name: "order_items"
+});
+
+declare({
+    database: "bigquery-public-data",
+    schema: "thelook_ecommerce",
+    name: "products"
+});
+
+declare({
+    database: "bigquery-public-data",
+    schema: "thelook_ecommerce",
+    name: "users"
 });

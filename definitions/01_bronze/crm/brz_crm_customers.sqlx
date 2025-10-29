@@ -14,7 +14,7 @@ SELECT
     Income AS annual_income,
     Kidhome AS kids_at_home,
     Teenhome AS teens_at_home,
-    PARSE_DATE('%d-%m-%Y', Dt_Customer) AS customer_since_date,
+    SAFE.PARSE_DATE('%d-%m-%Y', Dt_Customer) AS customer_since_date,
     Recency AS days_since_last_purchase,
     MntWines AS amount_spent_wine,
     -- ... (adicione outras colunas que julgar importantes) ...

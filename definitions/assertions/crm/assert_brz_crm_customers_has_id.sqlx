@@ -1,0 +1,12 @@
+config {
+  type: "assertion",
+  schema: "qa_assertions",
+  tags: ["assertion", "crm", "quality"]
+}
+
+SELECT
+  *
+FROM
+  ${ref("brz_crm_customers")}
+WHERE
+  customer_id IS NULL

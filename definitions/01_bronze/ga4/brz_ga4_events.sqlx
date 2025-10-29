@@ -1,15 +1,13 @@
 config {
-    type: "table",
-    schema: "brz_ga4",
-    bigquery: {
-        partitionBy: "event_date",
-        clusterBy: ["channel_grouping", "device_category"]
-    },
-    tags: ["bronze", "ga4"]
+  type: "table",
+  schema: "brz_ga4",
+  bigquery: {
+    partitionBy: "event_date",
+    clusterBy: ["channel_grouping", "device_category"]
+  },
+  tags: ["bronze", "ga4"]
 }
 
-  -- Arquivo: definitions/01_bronze/ga4/brz_ga4_events.sqlx
-  -- Seleciona e padroniza os campos da sessão
 SELECT
   PARSE_DATE('%Y%m%d', date) AS event_date,
   fullVisitorId AS user_pseudo_id,
@@ -23,7 +21,6 @@ SELECT
   totals.hits AS hits,
   totals.pageviews AS pageviews,
   totals.transactions AS transactions,
-  -- O revenue vem multiplicado por 10^6
   totals.transactionRevenue / 1000000 AS purchase_revenue,
   h.page.pagePath AS page_path
 FROM
@@ -31,5 +28,3 @@ FROM
   UNNEST(hits) AS h
 WHERE
   h.type = 'PAGE'
-  -- Filtra para ter uma linha por pageview
-  --teste

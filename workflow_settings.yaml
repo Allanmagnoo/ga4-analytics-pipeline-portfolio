@@ -1,8 +1,28 @@
+# --- CONFIGURAÇÕES PADRÃO ---
 defaultProject: datascience-473223
-defaultDataset: dataform
+defaultDataset: dev_work
 defaultAssertionDataset: qa_assertions
 defaultLocation: US
 dataformCoreVersion: 3.0.26
 
+# --- VARIÁVEIS DO PROJETO ---
+# A seção de variáveis começa aqui
+vars:
+  # O recuo de dois espaços é crucial.
+  # Nomes dos Datasets Bronze
+  bronze_ga4_bq: "brz_ga4"
+  bronze_crm_bq: "brz_crm" 
+  
+  # Nomes dos Datasets Silver
+  silver_ga4_bq: "slv_ga4"
 
+  # Nomes dos Datasets Gold
+  gold_marketing_bq: "gld_marketing"
 
+    # Fontes de Dados do Teste (Ecommerce)
+  bronze_ecommerce_bq: "brz_ecommerce"
+  silver_ecommerce_bq: "slv_ecommerce"
+  gold_ecommerce_bq: "gld_ecommerce"
+
+  # Janela para cargas incrementais (útil para o futuro)
+  incremental_window_days: "7"

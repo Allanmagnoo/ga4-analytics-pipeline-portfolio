@@ -1,0 +1,11 @@
+config {
+    type: "table",
+    schema: dataform.projectConfig.vars.bronze_ecommerce_bq,
+    tags: ["bronze", "ecommerce", "users"]
+}
+
+SELECT
+  *,
+  CURRENT_TIMESTAMP() AS data_ingestao
+FROM
+  ${ref("users")}
