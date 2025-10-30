@@ -1,0 +1,42 @@
+config {
+  type: "table",
+  schema: dataform.projectConfig.vars.gold_ecommerce_bq,
+  tags: ["gold", "ecommerce", "sales_fact"]
+}
+
+SELECT
+    -- Chaves e IDs
+    items.id AS item_pedido_id,
+    items.order_id AS pedido_id,
+    items.product_id,
+    ord.user_id,
+
+    -- Dimensões do Pedido
+    ord.data_pedido,
+    ord.ano_pedido,
+    ord.mes_pedido,
+    ord.status AS status_pedido,
+
+    -- Dimensões do Produto
+    prod.product_name,
+    prod.category AS product_category,
+    prod.brand AS product_brand,
+
+    -- Métricas (Fatos)
+    -- Decisão Técnica: Conforme definido na Silver, assumimos quantidade = 1 por linha
+    1 AS quantidade_vendida,
+    items.valor_total_item AS valor_total_vendido,
+    prod.cost AS custo_total_item,
+    (items.valor_total_item - prod.cost) AS margem_bruta_item
+
+FROM
+    -- Nossa tabela de itens de pedido limpa é a base (o fato)
+    ${ref("slv_ecommerce_order_items")} AS items
+
+-- Enriquecemos com os dados do pedido
+LEFT JOIN ${ref("slv_ecommerce_orders")} AS ord
+    ON items.order_id = ord.order_id
+
+-- Enriquecemos com os dados do produto
+LEFT JOIN ${ref("slv_ecommerce_products")} AS prod
+    ON items.product_id = prod.product_id

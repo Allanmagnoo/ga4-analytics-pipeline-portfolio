@@ -1,0 +1,40 @@
+config {
+  type: "table",
+  schema: dataform.projectConfig.vars.gold_ecommerce_bq,
+  tags: ["gold", "ecommerce", "kpi", "monthly_metrics"]
+}
+
+SELECT
+    -- As dimensões pelas quais estamos agrupando os dados
+    ano_pedido,
+    mes_pedido,
+    product_category,
+
+    -- As métricas de negócio (os fatos agregados)
+
+    -- Decisão Técnica: Usamos COUNT(DISTINCT pedido_id) para contar os pedidos únicos.
+    -- Se uma mesma compra teve 2 itens da mesma categoria, contamos como 1 pedido, não 2.
+    COUNT(DISTINCT pedido_id) AS quantidade_pedidos,
+
+    -- Soma simples da quantidade de itens vendidos
+    SUM(quantidade_vendida) AS quantidade_itens_vendidos,
+
+    -- Soma simples da receita total
+    SUM(valor_total_vendido) AS receita_total,
+
+    -- Decisão Técnica: O Ticket Médio é a Receita Total dividida pelo número de Pedidos.
+    -- Usamos SAFE_DIVIDE para evitar erros caso a quantidade de pedidos seja zero.
+    SAFE_DIVIDE(SUM(valor_total_vendido), COUNT(DISTINCT pedido_id)) AS ticket_medio
+
+FROM
+    -- Nossa fonte de dados é a tabela de fatos que acabamos de criar.
+    ${ref("gld_ecommerce_fato_vendas")}
+
+GROUP BY
+    -- Agrupamos pelas dimensões para colapsar os dados.
+    -- O uso de 1, 2, 3 é um atalho para as três primeiras colunas do SELECT.
+    1, 2, 3
+
+ORDER BY
+    -- Ordenamos o resultado para facilitar a visualização.
+    ano_pedido, mes_pedido, receita_total DESC
