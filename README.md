@@ -6,7 +6,7 @@
 
 ## 🎯 Objetivo do Projeto
 
-Este projeto implementa uma arquitetura de dados Medalhão (Bronze, Silver, Gold) de ponta a ponta no Google Cloud Platform, como parte do processo de avaliação técnica para a posição de Engenheiro de Dados. O objetivo é demonstrar a capacidade de ingerir, limpar, transformar e modelar dados de e-commerce, seguindo as melhores práticas de engenharia e os padrões de desenvolvimento da empresa.
+Este projeto implementa uma arquitetura de dados Medalhão (Bronze, Silver, Gold) de ponta a ponta no Google Cloud Platform. O objetivo é demonstrar a capacidade de ingerir, limpar, transformar e modelar dados de e-commerce, seguindo as melhores práticas de engenharia e os padrões de desenvolvimento da empresa.
 
 ---
 
@@ -58,9 +58,8 @@ O projeto é orquestrado pelo Dataform. Para executar o pipeline completo:
 
 A análise das tabelas da Camada Gold permite extrair os seguintes insights:
 
-1.  **Insight 1 (Exemplo):** A categoria **[Ex: 'Tops & Tees']**, apesar de não ser a de maior receita, possui a maior margem percentual média (~XX%), sugerindo que campanhas de marketing focadas nesta categoria podem ter um alto retorno sobre o investimento. *(Baseado em `metricas_mensais_categoria`)*.
-2.  **Insight 2 (Exemplo):** Identificamos um segmento de clientes "Campeões" (alta frequência e valor, com compra recente) que representa apenas X% da base de clientes, mas gera Y% da receita total. Um programa de fidelidade para este grupo poderia ser altamente eficaz. *(Baseado em `rfm_clientes`)*.
-3.  **Insight 3 (Exemplo):** O produto **[Ex: 'Solid Brass Paperweight']** é o item mais vendido em quantidade, mas sua margem de lucro é uma das mais baixas. Isso pode indicar uma oportunidade de otimização de preço ou de criar combos com produtos de maior margem. *(Baseado em `top_produtos`)*.
+1.  **Insight 1:** A peça **True Religion Men's Ricky Straight Jeas** da categoria **Jeans**, apesar de não ser a mais vendida, possui a maior receita com margem percentual média (~88.49%), sugerindo que campanhas de marketing focadas nesta categoria podem ter um alto retorno sobre o investimento. *(Baseado em `top_produtos`)*.
+
 
 ---
 
@@ -80,4 +79,5 @@ WHERE
   -- Exemplo para o último trimestre de 2023 no dataset
   ano_pedido = 2023 AND mes_pedido IN (10, 11, 12)
 GROUP BY 1
+
 ORDER BY 2 DESC;
