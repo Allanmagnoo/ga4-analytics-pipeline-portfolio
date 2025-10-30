@@ -1,0 +1,42 @@
+config {
+  type: "view",
+  schema: dataform.projectConfig.vars.gold_ecommerce_bq,
+  tags: ["gold", "ecommerce", "kpi", "rfm_analysis"]
+}
+
+-- CTE para calcular a data da última compra de todo o dataset.
+-- Usamos isso como o nosso "hoje" para que a análise seja consistente e replicável.
+WITH data_referencia AS (
+  SELECT MAX(data_pedido) as data_maxima
+  FROM ${ref("gld_ecommerce_fato_vendas")}
+)
+
+SELECT
+    user_id,
+
+    -- Cálculo da Recência (em dias)
+    -- Mede a distância em dias entre a última compra do cliente e a última compra registrada no dataset.
+    DATE_DIFF(
+        (SELECT data_maxima FROM data_referencia),
+        MAX(data_pedido),
+        DAY
+    ) AS recencia_dias,
+
+    -- Cálculo da Frequência
+    -- Conta o número de pedidos únicos que o cliente realizou.
+    COUNT(DISTINCT pedido_id) AS frequencia,
+
+    -- Cálculo do Valor Monetário
+    -- Soma o valor total de todos os itens que o cliente já comprou.
+    SUM(valor_total_vendido) AS valor_monetario_total
+
+FROM
+    ${ref("gld_ecommerce_fato_vendas")}
+
+WHERE user_id IS NOT NULL
+
+GROUP BY
+    user_id
+
+ORDER BY
+    valor_monetario_total DESC
