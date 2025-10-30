@@ -61,10 +61,10 @@ O repositório segue a estrutura padrão do Dataform para organização e clarez
 | | `slv_ecommerce_order_items` | ✅ Concluído |
 | | `slv_ecommerce_products` | ✅ Concluído |
 | | `slv_ecommerce_users` | ✅ Concluído |
-| **Gold** | `fato_vendas` | ⬜ A Fazer |
-| | `metricas_mensais_categoria` | ⬜ A Fazer |
-| | `top_produtos` | ⬜ A Fazer |
-
+| **Gold** | `fato_vendas` | ✅ Concluído |
+| | `metricas_mensais_categoria` | ✅ Concluído  |
+| | `top_produtos` | ✅ Concluído |
+| **Desafio Extra** | `gld_ecommerce_rfm_clientes` | ✅ Concluído |
 --- 
 
 
