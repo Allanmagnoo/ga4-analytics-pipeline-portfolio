@@ -1,0 +1,32 @@
+config {
+  type: "table",
+  schema: dataform.projectConfig.vars.gold_ecommerce_bq,
+  tags: ["gold", "ecommerce", "kpi", "ranking"]
+}
+
+SELECT
+    product_name,
+    product_category,
+
+    -- Agrega as métricas de performance por produto
+    SUM(quantidade_vendida) AS quantidade_total_vendida,
+    SUM(valor_total_vendido) AS receita_total_gerada,
+
+    -- Decisão Técnica: Cálculo da Margem Percentual Agregada.
+    -- Em vez de tirar uma média simples das margens por item (AVG(margem_bruta_item)),
+    -- que pode ser distorcida por itens de preços diferentes, calculamos a margem
+    -- percentual total para o produto. Esta é uma métrica de negócio mais precisa.
+    SAFE_DIVIDE(SUM(margem_bruta_item), SUM(custo_total_item)) * 100 AS margem_total_percentual
+
+FROM
+    ${ref("gld_ecommerce_fato_vendas")}
+
+GROUP BY
+    -- Agrupamos por produto para consolidar as métricas
+    1, 2
+
+ORDER BY
+    -- O critério de ranking do teste é "mais vendidos", ou seja, por quantidade
+    quantidade_total_vendida DESC
+
+LIMIT 20 -- Seleciona apenas os 20 primeiros do ranking
