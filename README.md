@@ -63,7 +63,7 @@ A análise das tabelas da Camada Gold permite extrair os seguintes insights:
 
 ---
 
-## [cite_start]쿼리 Consultas de Exemplo [cite: 2832]
+## [cite_start] Consultas de Exemplo [cite: 2832]
 
 Abaixo estão exemplos de como as tabelas Gold podem ser usadas para responder a perguntas de negócio.
 
@@ -81,3 +81,4 @@ WHERE
 GROUP BY 1
 
 ORDER BY 2 DESC;
+
