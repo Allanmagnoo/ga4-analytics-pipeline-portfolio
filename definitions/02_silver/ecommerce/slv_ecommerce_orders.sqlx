@@ -1,31 +1,37 @@
 config {
-    type: "table",
-    schema: dataform.projectConfig.vars.silver_ecommerce_bq,
-    tags: ["silver", "ecommerce", "orders"]
+  type: "table",
+  schema: dataform.projectConfig.vars.silver_ecommerce_bq,
+  tags: ["silver", "ecommerce", "orders"]
 }
 
+-- CTE para definir a data do pedido usando uma lógica de fallback
+WITH orders_with_coalesced_date AS (
+    SELECT
+        *,
+        -- Tenta preencher a data do pedido com created_at, depois shipped_at, depois delivered_at
+        COALESCE(created_at, shipped_at, delivered_at) AS data_pedido_coalesced
+    FROM
+        ${ref("brz_ecommerce_orders")}
+)
+
 SELECT
-  order_id,
-  user_id,
-  status,
-  -- Converte o timestamp para uma data limpa
-  CAST(created_at AS DATE) AS data_pedido,
-  -- Extrai o ano e o mês da data do pedido
-  EXTRACT(YEAR
+    order_id,
+    user_id,
+    status,
+    CAST(data_pedido_coalesced AS DATE) AS data_pedido,
+    EXTRACT(YEAR FROM data_pedido_coalesced) AS ano_pedido,
+    EXTRACT(MONTH FROM data_pedido_coalesced) AS mes_pedido,
+    gender,
+    returned_at,
+    shipped_at,
+    num_of_item
 FROM
-  created_at) AS ano_pedido,
-  EXTRACT(MONTH
-  FROM
-    created_at) AS mes_pedido,
-  -- Mantém as outras colunas relevantes
-  gender,
-  returned_at,
-  shipped_at,
-  num_of_item
-FROM
-  -- Lê da nossa tabela Bronze, não da fonte pública
-  ${ref("brz_ecommerce_orders")}
+    orders_with_coalesced_date
 WHERE
-  -- Aplica as regras de limpeza exigidas pelo teste
-  status != 'Cancelled'
-  AND order_id IS NOT NULL
+    status != 'Cancelled'
+    AND order_id IS NOT NULL
+    -- ESTA É A LINHA CRUCIAL:
+    -- Se, mesmo após o COALESCE, a data for nula (porque os dados são irrecuperáveis),
+    -- NÓS REMOVEMOS A LINHA. Isso garante que apenas dados de qualidade
+    -- cheguem à Camada Silver.
+    AND data_pedido_coalesced IS NOT NULL
