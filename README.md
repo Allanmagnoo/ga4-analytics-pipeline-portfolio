@@ -43,6 +43,11 @@ Este projeto implementa uma arquitetura de dados Medalhão (Bronze, Silver, Gold
     * **Problema:** `INNER JOIN` pode esconder problemas de integridade de dados (ex: uma venda de um produto que foi deletado do catálogo).
     * **Solução:** Optei por `LEFT JOIN` na criação da `fato_vendas` para garantir que nenhuma venda seja perdida na análise, mantendo a integridade da receita.
 
+5.  **Correção de `NULL`s na Camada Gold (Tabela `fato_vendas`):**
+    * **Problema:** A tabela de métricas (`gld_...metricas_mensais_categoria`) exibia uma grande linha com datas nulas, apesar de os dados na Bronze estarem completos.
+    * **Investigação:** A causa raiz foi identificada como um `LEFT JOIN` na `fato_vendas`. Itens de pedidos cancelados (filtrados na `slv_orders`) eram mantidos, mas recebiam `NULL` em todas as colunas de data do pedido.
+    * **Solução:** Mudei o `LEFT JOIN` para um `INNER JOIN` entre `slv_ecommerce_order_items` e `slv_ecommerce_orders`.
+    * **Valor:** Esta decisão de modelagem garante que a tabela de fatos de vendas contenha *apenas fatos de vendas válidos*, eliminando a poluição de dados de pedidos cancelados e corrigindo a integridade de todas as métricas na Camada Gold.
 ---
 
 ## [cite_start]⚙️ Como Executar os Scripts [cite: 2828]
