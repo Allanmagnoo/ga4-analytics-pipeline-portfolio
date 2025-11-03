@@ -1,0 +1,50 @@
+config {
+  type: "table",
+  schema: dataform.projectConfig.vars.gold_ecommerce_bq,
+  tags: ["gold", "ecommerce", "kpi", "rfm_analysis", "crm"]
+}
+
+-- CTE 1: Segmentação RFM
+-- Aqui, pegamos as pontuações RFM e as transformamos em segmentos de negócio acionáveis.
+WITH rfm_segments AS (
+  SELECT
+    user_id,
+    recencia_dias,
+    frequencia,
+    valor_monetario_total,
+
+    -- Decisão Técnica: Criação de segmentos de marketing baseados em RFM.
+    -- Esta lógica de negócio agora vive centralizada no Dataform.
+    CASE
+      WHEN recencia_dias <= 30 AND frequencia >= 5 AND valor_monetario_total >= 1000 THEN '🏆 Campeões'
+      WHEN recencia_dias <= 60 AND frequencia >= 3 THEN '💚 Clientes Leais'
+      WHEN recencia_dias <= 45 AND frequencia = 1 THEN '⭐ Novos Clientes'
+      WHEN recencia_dias >= 120 AND frequencia > 3 THEN '💔 Em Risco (Leais que sumiram)'
+      WHEN recencia_dias >= 180 THEN '💤 Adormecidos'
+      ELSE 'Outros'
+    END AS segmento_cliente
+  FROM
+    ${ref("gld_ecommerce_rfm_clientes")}
+)
+
+-- CTE 2: Agregação de Vendas
+-- Une os fatos de vendas com os segmentos de cliente.
+SELECT
+    rfm.segmento_cliente,
+    fatos.product_category,
+
+    -- Métricas de Negócio
+    SUM(fatos.valor_total_vendido) AS receita_total,
+    SUM(fatos.quantidade_vendida) AS quantidade_total_vendida,
+    COUNT(DISTINCT fatos.pedido_id) AS total_pedidos,
+    COUNT(DISTINCT fatos.user_id) AS total_clientes_no_segmento
+
+FROM
+    ${ref("gld_ecommerce_fato_vendas")} AS fatos
+
+-- Junta os fatos de vendas com os segmentos de cliente
+INNER JOIN rfm_segments AS rfm
+    ON fatos.user_id = rfm.user_id
+
+GROUP BY
+    1, 2
