@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Teste Técnico: Pipeline de Dados com Arquitetura Medalhão no GCP
 
 **Status:** ✅ Projeto Concluído ✅
@@ -164,6 +163,7 @@ ORDER BY
 <img width="1968" height="575" alt="image" src="https://github.com/user-attachments/assets/947600ec-c73d-4796-8c1e-20073aebc0d0" />
 
 Fluxo Conceitual:
+
 
 [Fonte: bigquery-public-data.thelook_ecommerce] → [Camada Bronze (4 tabelas)] → [Camada Silver (4 tabelas)] → [Camada Gold (Fatos e Agregações)]
 =======
