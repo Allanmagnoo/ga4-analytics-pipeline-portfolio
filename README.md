@@ -139,10 +139,11 @@ WHERE
   )
 ORDER BY
   valor_monetaria_total DESC;
+```
 
-2. Performance de Vendas (Receita vs. Margem) para a Faixa Etária "25-34" por Categoria:
+**2. Performance de Vendas (Receita vs. Margem) para a Faixa Etária "25-34" por Categoria:**
 
-'''sql
+```sql
 -- Analisa quais categorias são mais lucrativas vs. mais populares
 -- para a faixa etária de marketing mais cobiçada.
 SELECT
@@ -157,6 +158,7 @@ GROUP BY
   1
 ORDER BY
   receita_total DESC;
+```
 
 ## 📈 Diagrama de Fluxo
 
@@ -166,3 +168,6 @@ Fluxo Conceitual:
 
 
 [Fonte: bigquery-public-data.thelook_ecommerce] → [Camada Bronze (4 tabelas)] → [Camada Silver (4 tabelas)] → [Camada Gold (Fatos e Agregações)]
+
+
+
