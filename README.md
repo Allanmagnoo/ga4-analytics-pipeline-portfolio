@@ -30,7 +30,7 @@ O pipeline foi construído utilizando **Dataform** para orquestração e transfo
 
 Para demonstrar a aplicação prática e o valor de negócio dos dados da Camada Gold, um dashboard interativo foi criado no Looker Studio. Este painel permite a exploração dos KPIs de negócio, análise de rentabilidade de produtos e segmentação de clientes (RFM).
 
-[**Clique aqui para acessar o Dashboard Interativo**](https://lookerstudio.google.com/u/0/reporting/3f5e8dde-6737-45af-8922-31273f9de921/page/p_2jccde8nxd)
+[**Clique aqui para acessar o Dashboard Interativo**]([https://lookerstudio.google.com/u/0/reporting/3f5e8dde-6737-45af-8922-31273f9de921/page/p_2jccde8nxd](https://lookerstudio.google.com/reporting/3f5e8dde-6737-45af-8922-31273f9de921))
 
 ## 📝 Decisões Técnicas e Raciocínio (O "Porquê?")
 
@@ -163,5 +163,6 @@ ORDER BY
 <img width="1968" height="575" alt="image" src="https://github.com/user-attachments/assets/947600ec-c73d-4796-8c1e-20073aebc0d0" />
 
 Fluxo Conceitual:
+
 
 [Fonte: bigquery-public-data.thelook_ecommerce] → [Camada Bronze (4 tabelas)] → [Camada Silver (4 tabelas)] → [Camada Gold (Fatos e Agregações)]
