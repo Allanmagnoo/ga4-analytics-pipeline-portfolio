@@ -4,21 +4,65 @@ config {
   tags: ["gold", "ecommerce", "sales_fact"]
 }
 
+-- CTE para ranquear os pedidos de cada usuário e identificar a primeira compra
+WITH order_ranking_by_user AS (
+  SELECT
+    order_id,
+    user_id,
+    ROW_NUMBER() OVER(PARTITION BY user_id ORDER BY data_pedido ASC) as user_order_sequence
+  FROM
+    ${ref("slv_ecommerce_orders")}
+)
+
 SELECT
+    -- Chaves e IDs
     items.id AS item_pedido_id,
     items.order_id AS pedido_id,
     items.product_id,
     ord.user_id,
 
+    -- === DIMENSÕES DE TEMPO ===
     ord.data_pedido,
     ord.ano_pedido,
     ord.mes_pedido,
-    ord.status AS status_pedido,
+    FORMAT_DATE('%A', ord.data_pedido) AS dia_da_semana,
 
+    -- === DIMENSÕES DE PEDIDO ===
+    ord.status AS status_pedido,
+    CASE
+        WHEN rnk.user_order_sequence = 1 THEN 'Novo Cliente'
+        ELSE 'Cliente Recorrente'
+    END AS tipo_cliente,
+
+    -- === DIMENSÕES DE PRODUTO ===
     prod.product_name,
     prod.category AS product_category,
     prod.brand AS product_brand,
+    prod.department AS product_department,
 
+    -- === DIMENSÕES DE CLIENTE (Geográficas) ===
+    usr.country AS user_country,
+    usr.state AS user_state,
+    usr.city AS user_city,
+
+    -- === DIMENSÕES DE CLIENTE (Demográficas) ===
+    -- CORREÇÃO APLICADA AQUI: Usando o nome exato da Camada Silver
+    usr.idade_atual_estimada AS user_idade_estimada,
+
+    -- Solução de Negócio: Cria faixas etárias acionáveis para o marketing
+    CASE
+        -- CORREÇÃO APLICADA EM TODAS AS LINHAS ABAIXO:
+        WHEN usr.idade_atual_estimada <= 17 THEN 'Abaixo de 18'
+        WHEN usr.idade_atual_estimada BETWEEN 18 AND 24 THEN '18-24'
+        WHEN usr.idade_atual_estimada BETWEEN 25 AND 34 THEN '25-34'
+        WHEN usr.idade_atual_estimada BETWEEN 35 AND 44 THEN '35-44'
+        WHEN usr.idade_atual_estimada BETWEEN 45 AND 54 THEN '45-54'
+        WHEN usr.idade_atual_estimada BETWEEN 55 AND 64 THEN '55-64'
+        WHEN usr.idade_atual_estimada >= 65 THEN '65+'
+        ELSE 'Desconhecido'
+    END AS user_faixa_etaria,
+
+    -- === MÉTRICAS (FATOS) ===
     1 AS quantidade_vendida,
     items.valor_total_item AS valor_total_vendido,
     prod.cost AS custo_total_item,
@@ -27,14 +71,14 @@ SELECT
 FROM
     ${ref("slv_ecommerce_order_items")} AS items
 
--- Decisão Técnica: Mudança de LEFT para INNER JOIN.
--- A tabela de fatos SÓ deve conter vendas reais. Um item de um pedido
--- cancelado (filtrado na slv_ecommerce_orders) não é um fato de venda.
--- O INNER JOIN garante que apenas itens de pedidos válidos sejam incluídos.
 INNER JOIN ${ref("slv_ecommerce_orders")} AS ord
     ON items.order_id = ord.order_id
 
--- Mantemos o LEFT JOIN para produtos, pois podemos querer analisar
--- vendas de produtos que foram removidos do catálogo.
 LEFT JOIN ${ref("slv_ecommerce_products")} AS prod
     ON items.product_id = prod.product_id
+
+LEFT JOIN ${ref("slv_ecommerce_users")} AS usr
+    ON ord.user_id = usr.user_id
+
+LEFT JOIN order_ranking_by_user AS rnk
+    ON ord.order_id = rnk.order_id
