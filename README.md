@@ -34,7 +34,7 @@ Business Intelligence (Consumidor): Looker Studio, Power BI
 
 Para demonstrar a aplicação prática e o valor de negócio dos dados da Camada Gold, um dashboard interativo foi criado no Looker Studio. Este painel permite a exploração dos KPIs de negócio, análise de rentabilidade de produtos e segmentação de clientes (RFM).
 
-[Clique aqui para acessar o Dashboard Interativo]([url](https://lookerstudio.google.com/u/0/reporting/3f5e8dde-6737-45af-8922-31273f9de921/page/p_2jccde8nxd))
+[Clique aqui para acessar o Dashboard Interativo](https://lookerstudio.google.com/u/0/reporting/3f5e8dde-6737-45af-8922-31273f9de921/page/p_2jccde8nxd)
 
 
 📝 Decisões Técnicas e Raciocínio (O "Porquê?")
@@ -182,3 +182,4 @@ ORDER BY
 Fluxo Conceitual:
 
 [Fonte: bigquery-public-data.thelook_ecommerce] → [Camada Bronze (4 tabelas)] → [Camada Silver (4 tabelas)] → [Camada Gold (Fatos e Agregações)]
+
