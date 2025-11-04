@@ -8,16 +8,6 @@ dataformCoreVersion: 3.0.26
 # --- VARIÁVEIS DO PROJETO ---
 # A seção de variáveis começa aqui
 vars:
-  # O recuo de dois espaços é crucial.
-  # Nomes dos Datasets Bronze
-  bronze_ga4_bq: "brz_ga4"
-  bronze_crm_bq: "brz_crm" 
-  
-  # Nomes dos Datasets Silver
-  silver_ga4_bq: "slv_ga4"
-
-  # Nomes dos Datasets Gold
-  gold_marketing_bq: "gld_marketing"
 
     # Fontes de Dados do Teste (Ecommerce)
   bronze_ecommerce_bq: "brz_ecommerce"
