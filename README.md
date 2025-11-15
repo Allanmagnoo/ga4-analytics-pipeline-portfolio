@@ -139,28 +139,9 @@ WHERE
   )
 ORDER BY
   valor_monetaria_total DESC;
-
-2. Performance de Vendas (Receita vs. Margem) para a Faixa Etária "25-34" por Categoria:
-
-'''sql
--- Analisa quais categorias são mais lucrativas vs. mais populares
--- para a faixa etária de marketing mais cobiçada.
-SELECT
-  product_category,
-  SUM(valor_total_vendido) AS receita_total,
-  SAFE_DIVIDE(SUM(margem_bruta_item), SUM(custo_total_item)) * 100 AS margem_percentual_agregada
-FROM
-  `datascience-451918.gld_ecommerce.gld_ecommerce_fato_vendas`
-WHERE
-  user_faixa_etaria = '25-34'
-GROUP BY
-  1
-ORDER BY
-  receita_total DESC;
-
 ```
 
-**2. Performance de Vendas (Receita vs. Margem) para a Faixa Etária "25-34" por Categoria:**
+2. Performance de Vendas (Receita vs. Margem) para a Faixa Etária "25-34" por Categoria:
 
 ```sql
 -- Analisa quais categorias são mais lucrativas vs. mais populares
@@ -177,7 +158,9 @@ GROUP BY
   1
 ORDER BY
   receita_total DESC;
+
 ```
+
 
 ## 📈 Diagrama de Fluxo
 
@@ -187,6 +170,7 @@ Fluxo Conceitual:
 
 
 [Fonte: bigquery-public-data.thelook_ecommerce] → [Camada Bronze (4 tabelas)] → [Camada Silver (4 tabelas)] → [Camada Gold (Fatos e Agregações)]
+
 
 
 
