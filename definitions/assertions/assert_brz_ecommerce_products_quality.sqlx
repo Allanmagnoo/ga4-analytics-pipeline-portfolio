@@ -1,0 +1,85 @@
+config {
+  type: "assertion",
+  name: "assert_brz_ecommerce_products_quality",
+  tags: ["assertion", "ecommerce", "bronze", "data_quality", "critical", "pricing"],
+  description: "Valida a qualidade dos dados de produtos: custos, preços, margens e consistência de precificação."
+}
+
+/*
+===================================================================
+Assertion: Product Quality Validation
+Objetivo: Garantir qualidade dos dados de precificação e margem
+===================================================================
+*/
+
+SELECT
+  product_id,
+  sku,
+  product_name,
+  product_category,
+  product_cost,
+  product_retail_price,
+  
+  -- Margem calculada para validação
+  product_retail_price - product_cost AS gross_margin_calc,
+  SAFE_DIVIDE(product_retail_price - product_cost, product_cost) * 100 AS margin_percentage_calc,
+  
+  -- Classificação do problema
+  CASE
+    -- Chaves e campos obrigatórios
+    WHEN product_id IS NULL THEN 'PK_NULL: Product ID ausente'
+    WHEN sku IS NULL THEN 'DATA_NULL: SKU ausente'
+    WHEN product_name IS NULL OR TRIM(product_name) = '' THEN 'DATA_NULL: Nome do produto ausente/vazio'
+    
+    -- Validações de custo
+    WHEN product_cost IS NULL THEN 'PRICING_NULL: Custo ausente'
+    WHEN product_cost <= 0 THEN 'PRICING_INVALID: Custo zero ou negativo'
+    WHEN product_cost > 10000 THEN 'PRICING_SUSPICIOUS: Custo suspeito (>$10k)'
+    
+    -- Validações de preço
+    WHEN product_retail_price IS NULL THEN 'PRICING_NULL: Preço de venda ausente'
+    WHEN product_retail_price <= 0 THEN 'PRICING_INVALID: Preço zero ou negativo'
+    
+    -- Validações de margem
+    WHEN product_cost > product_retail_price THEN 'MARGIN_NEGATIVE: Custo maior que preço de venda'
+    WHEN SAFE_DIVIDE(product_retail_price - product_cost, product_cost) * 100 < 5 THEN 'MARGIN_LOW: Margem muito baixa (<5%)'
+    WHEN SAFE_DIVIDE(product_retail_price - product_cost, product_cost) * 100 > 1000 THEN 'MARGIN_SUSPICIOUS: Margem extrema (>1000%)'
+    
+    -- Validações de categoria
+    WHEN product_category IS NULL THEN 'CLASSIFICATION_NULL: Categoria ausente'
+    WHEN product_brand IS NULL THEN 'CLASSIFICATION_NULL: Marca ausente'
+    
+    ELSE 'UNKNOWN'
+  END AS tipo_problema,
+  
+  -- Contexto adicional para análise
+  product_brand,
+  product_department
+
+FROM
+  ${ref("brz_ecommerce_products")}
+
+WHERE
+  -- Chaves obrigatórias
+  product_id IS NULL
+  OR sku IS NULL
+  OR product_name IS NULL
+  OR TRIM(product_name) = ''
+  
+  -- Problemas de precificação
+  OR product_cost IS NULL
+  OR product_cost <= 0
+  OR product_cost > 10000
+  OR product_retail_price IS NULL
+  OR product_retail_price <= 0
+  
+  -- Problemas de margem
+  OR product_cost > product_retail_price
+  OR SAFE_DIVIDE(product_retail_price - product_cost, product_cost) * 100 < 5
+  OR SAFE_DIVIDE(product_retail_price - product_cost, product_cost) * 100 > 1000
+  
+  -- Classificação ausente
+  OR product_category IS NULL
+  OR product_brand IS NULL
+
+ORDER BY tipo_problema, product_id

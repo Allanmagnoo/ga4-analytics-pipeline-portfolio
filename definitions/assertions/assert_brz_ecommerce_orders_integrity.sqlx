@@ -1,0 +1,66 @@
+config {
+  type: "assertion",
+  name: "assert_brz_ecommerce_orders_integrity",
+  tags: ["assertion", "ecommerce", "bronze", "data_quality", "integrity"],
+  description: "Valida a integridade lógica dos pedidos: sequência de datas do ciclo de vida e obrigatoriedade de chaves."
+}
+
+/*
+===================================================================
+Assertion: Order Integrity Validation
+Objetivo: Garantir que o ciclo de vida do pedido está consistente
+===================================================================
+*/
+
+SELECT
+  order_id,
+  user_id,
+  order_created_at,
+  order_shipped_at,
+  order_delivered_at,
+  order_returned_at,
+  order_status,
+  
+  -- Classificação do problema
+  CASE
+    WHEN order_id IS NULL THEN 'PK_NULL: Order ID ausente'
+    WHEN user_id IS NULL THEN 'FK_NULL: User ID ausente'
+    WHEN order_created_at IS NULL THEN 'TIMESTAMP_NULL: Data de criação ausente'
+    
+    -- Validações de sequência temporal
+    WHEN order_shipped_at IS NOT NULL AND order_shipped_at < order_created_at THEN 'TEMPORAL_ERROR: Enviado antes da criação'
+    WHEN order_delivered_at IS NOT NULL AND order_shipped_at IS NOT NULL AND order_delivered_at < order_shipped_at THEN 'TEMPORAL_ERROR: Entregue antes do envio'
+    WHEN order_delivered_at IS NOT NULL AND order_delivered_at < order_created_at THEN 'TEMPORAL_ERROR: Entregue antes da criação'
+    WHEN order_returned_at IS NOT NULL AND order_returned_at < order_created_at THEN 'TEMPORAL_ERROR: Retornado antes da criação'
+    
+    -- Validações de lógica de negócio
+    WHEN order_status = 'Shipped' AND order_shipped_at IS NULL THEN 'BUSINESS_RULE: Status shipped sem data de envio'
+    WHEN order_status = 'Complete' AND order_delivered_at IS NULL THEN 'BUSINESS_RULE: Status complete sem data de entrega'
+    WHEN order_status = 'Returned' AND order_returned_at IS NULL THEN 'BUSINESS_RULE: Status returned sem data de devolução'
+    
+    ELSE 'UNKNOWN'
+  END AS tipo_problema,
+  
+  -- Contexto adicional para debug
+  TIMESTAMP_DIFF(order_shipped_at, order_created_at, HOUR) AS hours_to_ship,
+  TIMESTAMP_DIFF(order_delivered_at, order_shipped_at, HOUR) AS hours_to_deliver
+
+FROM
+  ${ref("brz_ecommerce_orders")}
+
+WHERE
+  -- Chaves obrigatórias
+  order_id IS NULL
+  OR user_id IS NULL
+  OR order_created_at IS NULL
+  
+  -- Sequência temporal inválida
+  OR (order_shipped_at IS NOT NULL AND order_shipped_at < order_created_at)
+  OR (order_delivered_at IS NOT NULL AND order_shipped_at IS NOT NULL AND order_delivered_at < order_shipped_at)
+  OR (order_delivered_at IS NOT NULL AND order_delivered_at < order_created_at)
+  OR (order_returned_at IS NOT NULL AND order_returned_at < order_created_at)
+  
+  -- Inconsistências de status
+  OR (order_status = 'Shipped' AND order_shipped_at IS NULL)
+  OR (order_status = 'Complete' AND order_delivered_at IS NULL)
+  OR (order_status = 'Returned' AND order_returned_at IS NULL)

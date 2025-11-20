@@ -1,0 +1,101 @@
+config {
+  type: "assertion",
+  name: "assert_brz_ecommerce_users_validity",
+  tags: ["assertion", "ecommerce", "bronze", "data_quality", "pii"],
+  description: "Valida a qualidade dos dados de usuários: idade, email, localização e dados demográficos."
+}
+
+/*
+===================================================================
+Assertion: User Data Validity
+Objetivo: Garantir qualidade dos dados demográficos e PII
+===================================================================
+*/
+
+SELECT
+  user_id,
+  user_email,
+  user_age,
+  user_gender,
+  user_country,
+  user_state,
+  user_city,
+  
+  -- Classificação do problema
+  CASE
+    -- Chaves obrigatórias
+    WHEN user_id IS NULL THEN 'PK_NULL: User ID ausente'
+    
+    -- Validações de email (PII crítico)
+    WHEN user_email IS NULL THEN 'PII_NULL: Email ausente'
+    WHEN TRIM(user_email) = '' THEN 'PII_INVALID: Email vazio'
+    WHEN NOT REGEXP_CONTAINS(user_email, r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$') THEN 'PII_INVALID: Formato de email inválido'
+    WHEN LENGTH(user_email) > 255 THEN 'PII_INVALID: Email muito longo'
+    
+    -- Validações de idade
+    WHEN user_age IS NULL THEN 'DEMOGRAPHIC_NULL: Idade ausente'
+    WHEN user_age < 0 THEN 'DEMOGRAPHIC_INVALID: Idade negativa'
+    WHEN user_age < 13 THEN 'DEMOGRAPHIC_COMPLIANCE: Idade menor que 13 (COPPA)'
+    WHEN user_age > 120 THEN 'DEMOGRAPHIC_INVALID: Idade suspeita (>120 anos)'
+    
+    -- Validações de gênero
+    WHEN user_gender IS NULL THEN 'DEMOGRAPHIC_NULL: Gênero ausente'
+    WHEN user_gender NOT IN ('M', 'F', 'Male', 'Female', 'Other', 'Prefer not to say') THEN 'DEMOGRAPHIC_INVALID: Valor de gênero não padronizado'
+    
+    -- Validações de localização
+    WHEN user_country IS NULL THEN 'GEO_NULL: País ausente'
+    WHEN user_state IS NULL THEN 'GEO_NULL: Estado ausente'
+    WHEN user_city IS NULL THEN 'GEO_NULL: Cidade ausente'
+    WHEN user_postal_code IS NULL THEN 'GEO_NULL: CEP/Código postal ausente'
+    
+    -- Validações de coordenadas
+    WHEN user_latitude IS NULL OR user_longitude IS NULL THEN 'GEO_NULL: Coordenadas ausentes'
+    WHEN user_latitude < -90 OR user_latitude > 90 THEN 'GEO_INVALID: Latitude fora do range (-90 a 90)'
+    WHEN user_longitude < -180 OR user_longitude > 180 THEN 'GEO_INVALID: Longitude fora do range (-180 a 180)'
+    
+    ELSE 'UNKNOWN'
+  END AS tipo_problema,
+  
+  -- Contexto adicional para análise
+  user_created_at,
+  user_traffic_source,
+  age_group
+
+FROM
+  ${ref("brz_ecommerce_users")}
+
+WHERE
+  -- Chaves obrigatórias
+  user_id IS NULL
+  
+  -- Problemas de email
+  OR user_email IS NULL
+  OR TRIM(user_email) = ''
+  OR NOT REGEXP_CONTAINS(user_email, r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
+  OR LENGTH(user_email) > 255
+  
+  -- Problemas de idade
+  OR user_age IS NULL
+  OR user_age < 0
+  OR user_age < 13
+  OR user_age > 120
+  
+  -- Problemas de gênero
+  OR user_gender IS NULL
+  OR user_gender NOT IN ('M', 'F', 'Male', 'Female', 'Other', 'Prefer not to say')
+  
+  -- Problemas de localização
+  OR user_country IS NULL
+  OR user_state IS NULL
+  OR user_city IS NULL
+  OR user_postal_code IS NULL
+  
+  -- Problemas de coordenadas
+  OR user_latitude IS NULL
+  OR user_longitude IS NULL
+  OR user_latitude < -90
+  OR user_latitude > 90
+  OR user_longitude < -180
+  OR user_longitude > 180
+
+ORDER BY tipo_problema, user_id
