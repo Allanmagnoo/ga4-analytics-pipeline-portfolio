@@ -1,21 +1,26 @@
 config {
-  type: "view",
+  type: "table",
   schema: dataform.projectConfig.vars.gold_ecommerce_bq,
   name: "gld_executive_summary",
-  tags: ["gold", "ecommerce", "analytics", "summary", "executive"],
-  description: "Visão executiva consolidada com principais KPIs e métricas de negócio para dashboards C-level."
+  tags: ["gold", "ecommerce", "analytics", "summary", "executive", "dashboard"],
+  description: "Executive dashboard with period-over-period comparisons, health scores, and key business metrics for C-level reporting."
 }
 
 /*
 ===================================================================
-Gold Layer - Executive Summary
-Objetivo: Snapshot de alto nível para executivos
+Gold Layer - Executive Summary Dashboard
+Objetivo: Consolidated view of all critical business metrics
+Features:
+- 30-day vs 30-day period comparison
+- Customer health indicators (CLV segments)
+- Product performance metrics
+- Operational efficiency scores
+- Revenue and growth trends
 ===================================================================
 */
 
 WITH current_period AS (
   SELECT
-    -- Period definition (últimos 30 dias)
     DATE_SUB(CURRENT_DATE(), INTERVAL 30 DAY) AS period_start,
     CURRENT_DATE() AS period_end
 ),
@@ -23,10 +28,10 @@ WITH current_period AS (
 previous_period AS (
   SELECT
     DATE_SUB(CURRENT_DATE(), INTERVAL 60 DAY) AS period_start,
-    DATE_SUB(CURRENT_DATE(), INTERVAL 30 DAY) AS period_end
+    DATE_SUB(CURRENT_DATE(), INTERVAL 31 DAY) AS period_end
 ),
 
--- Current period metrics
+-- Current period metrics (last 30 days)
 current_metrics AS (
   SELECT
     COUNT(DISTINCT o.order_id) AS orders,
@@ -34,14 +39,22 @@ current_metrics AS (
     SUM(oi.sale_price) AS revenue,
     COUNT(DISTINCT oi.product_id) AS products_sold,
     AVG(o.days_to_complete) AS avg_fulfillment_days,
-    SUM(CASE WHEN o.is_cancelled THEN 1 ELSE 0 END) / COUNT(*) * 100 AS cancellation_rate
+    SAFE_DIVIDE(
+      SUM(CASE WHEN o.is_cancelled THEN 1 ELSE 0 END),
+      COUNT(*)
+    ) * 100 AS cancellation_rate,
+    SAFE_DIVIDE(
+      SUM(CASE WHEN o.is_returned THEN 1 ELSE 0 END),
+      COUNT(*)
+    ) * 100 AS return_rate
   FROM ${ref("slv_ecommerce_orders")} o
   INNER JOIN ${ref("slv_ecommerce_order_items")} oi ON o.order_id = oi.order_id
   CROSS JOIN current_period cp
   WHERE DATE(o.created_at) BETWEEN cp.period_start AND cp.period_end
+    AND NOT o.is_cancelled
 ),
 
--- Previous period metrics
+-- Previous period metrics (30 days before current)
 previous_metrics AS (
   SELECT
     COUNT(DISTINCT o.order_id) AS orders,
@@ -52,82 +65,185 @@ previous_metrics AS (
   INNER JOIN ${ref("slv_ecommerce_order_items")} oi ON o.order_id = oi.order_id
   CROSS JOIN previous_period pp
   WHERE DATE(o.created_at) BETWEEN pp.period_start AND pp.period_end
+    AND NOT o.is_cancelled
 ),
 
--- Customer base metrics
-customer_metrics AS (
+-- Customer base health metrics
+customer_health AS (
   SELECT
     COUNT(DISTINCT user_id) AS total_customers,
     COUNT(DISTINCT CASE WHEN customer_segment = 'Champions' THEN user_id END) AS champion_customers,
+    COUNT(DISTINCT CASE WHEN customer_segment = 'Loyal Customers' THEN user_id END) AS loyal_customers,
     COUNT(DISTINCT CASE WHEN customer_segment = 'At Risk' THEN user_id END) AS at_risk_customers,
-    AVG(total_revenue) AS avg_customer_ltv
+    COUNT(DISTINCT CASE WHEN customer_segment = 'Lost' THEN user_id END) AS lost_customers,
+    AVG(total_revenue) AS avg_customer_ltv,
+    AVG(total_orders) AS avg_customer_frequency,
+    AVG(recency_days) AS avg_recency_days
   FROM ${ref("gld_customer_lifetime_value")}
 ),
 
--- Product metrics
-product_metrics AS (
+-- Product catalog health metrics
+product_health AS (
   SELECT
     COUNT(DISTINCT product_id) AS total_products,
     COUNT(DISTINCT CASE WHEN performance_tier = 'Star' THEN product_id END) AS star_products,
+    COUNT(DISTINCT CASE WHEN performance_tier = 'High Volume' THEN product_id END) AS high_volume_products,
     COUNT(DISTINCT CASE WHEN performance_tier = 'Slow Moving' THEN product_id END) AS slow_moving_products,
-    AVG(margin_percentage) AS avg_product_margin
+    COUNT(DISTINCT CASE WHEN performance_tier = 'Dormant' THEN product_id END) AS dormant_products,
+    AVG(margin_percentage) AS avg_product_margin,
+    AVG(return_rate) AS avg_product_return_rate
   FROM ${ref("gld_product_performance")}
 )
 
 SELECT
-  -- Current period snapshot
-  'Last 30 Days' AS period,
+  -- Metadata
+  'Last 30 Days' AS period_label,
   CURRENT_DATE() AS report_date,
+  (SELECT period_start FROM current_period) AS current_period_start,
+  (SELECT period_end FROM current_period) AS current_period_end,
+  (SELECT period_start FROM previous_period) AS previous_period_start,
+  (SELECT period_end FROM previous_period) AS previous_period_end,
   
-  -- Revenue & Growth
-  cm.revenue AS current_revenue,
-  pm.revenue AS previous_revenue,
-  SAFE_DIVIDE(cm.revenue - pm.revenue, pm.revenue) * 100 AS revenue_growth_pct,
+  -- ========================================
+  -- REVENUE METRICS
+  -- ========================================
+  ROUND(cm.revenue, 2) AS current_revenue,
+  ROUND(pm.revenue, 2) AS previous_revenue,
+  ROUND(SAFE_DIVIDE(cm.revenue - pm.revenue, pm.revenue) * 100, 2) AS revenue_growth_pct,
+  ROUND(cm.revenue - pm.revenue, 2) AS revenue_delta,
   
-  -- Orders & Growth
+  -- ========================================
+  -- ORDER METRICS
+  -- ========================================
   cm.orders AS current_orders,
   pm.orders AS previous_orders,
-  SAFE_DIVIDE(cm.orders - pm.orders, pm.orders) * 100 AS orders_growth_pct,
-  SAFE_DIVIDE(cm.revenue, cm.orders) AS avg_order_value,
+  ROUND(SAFE_DIVIDE(cm.orders - pm.orders, pm.orders) * 100, 2) AS orders_growth_pct,
+  cm.orders - pm.orders AS orders_delta,
+  ROUND(SAFE_DIVIDE(cm.revenue, cm.orders), 2) AS avg_order_value,
   
-  -- Customer metrics
+  -- ========================================
+  -- CUSTOMER METRICS
+  -- ========================================
   cm.active_customers AS current_active_customers,
   pm.active_customers AS previous_active_customers,
-  custm.total_customers AS total_customer_base,
-  custm.champion_customers,
-  custm.at_risk_customers,
-  custm.avg_customer_ltv,
+  ROUND(SAFE_DIVIDE(cm.active_customers - pm.active_customers, pm.active_customers) * 100, 2) AS active_customers_growth_pct,
   
-  -- Product metrics
+  -- Customer base composition
+  ch.total_customers AS total_customer_base,
+  ch.champion_customers,
+  ch.loyal_customers,
+  ch.at_risk_customers,
+  ch.lost_customers,
+  ROUND(ch.avg_customer_ltv, 2) AS avg_customer_ltv,
+  ROUND(ch.avg_customer_frequency, 1) AS avg_customer_frequency,
+  ROUND(ch.avg_recency_days, 0) AS avg_recency_days,
+  
+  -- Customer health percentages
+  ROUND(SAFE_DIVIDE(ch.champion_customers, ch.total_customers) * 100, 2) AS champion_pct,
+  ROUND(SAFE_DIVIDE(ch.at_risk_customers, ch.total_customers) * 100, 2) AS at_risk_pct,
+  
+  -- ========================================
+  -- PRODUCT METRICS
+  -- ========================================
   cm.products_sold AS products_sold_current_period,
-  prodm.total_products AS total_product_catalog,
-  prodm.star_products,
-  prodm.slow_moving_products,
-  prodm.avg_product_margin,
+  ph.total_products AS total_product_catalog,
+  ph.star_products,
+  ph.high_volume_products,
+  ph.slow_moving_products,
+  ph.dormant_products,
+  ROUND(ph.avg_product_margin, 2) AS avg_product_margin,
+  ROUND(ph.avg_product_return_rate, 2) AS avg_product_return_rate,
   
-  -- Operational metrics
-  cm.avg_fulfillment_days,
-  cm.cancellation_rate,
+  -- Product health percentages
+  ROUND(SAFE_DIVIDE(ph.star_products, ph.total_products) * 100, 2) AS star_products_pct,
+  ROUND(SAFE_DIVIDE(ph.dormant_products, ph.total_products) * 100, 2) AS dormant_products_pct,
   
-  -- Health scores (0-100)
+  -- ========================================
+  -- OPERATIONAL METRICS
+  -- ========================================
+  ROUND(cm.avg_fulfillment_days, 1) AS avg_fulfillment_days,
+  ROUND(cm.cancellation_rate, 2) AS cancellation_rate,
+  ROUND(cm.return_rate, 2) AS return_rate,
+  
+  -- ========================================
+  -- HEALTH SCORES (0-100)
+  -- ========================================
+  
+  -- Revenue Health Score
   CASE 
-    WHEN SAFE_DIVIDE(cm.revenue - pm.revenue, pm.revenue) * 100 > 10 THEN 100
-    WHEN SAFE_DIVIDE(cm.revenue - pm.revenue, pm.revenue) * 100 > 0 THEN 75
-    WHEN SAFE_DIVIDE(cm.revenue - pm.revenue, pm.revenue) * 100 > -10 THEN 50
-    ELSE 25
+    WHEN SAFE_DIVIDE(cm.revenue - pm.revenue, pm.revenue) * 100 > 15 THEN 100
+    WHEN SAFE_DIVIDE(cm.revenue - pm.revenue, pm.revenue) * 100 > 10 THEN 90
+    WHEN SAFE_DIVIDE(cm.revenue - pm.revenue, pm.revenue) * 100 > 5 THEN 80
+    WHEN SAFE_DIVIDE(cm.revenue - pm.revenue, pm.revenue) * 100 > 0 THEN 70
+    WHEN SAFE_DIVIDE(cm.revenue - pm.revenue, pm.revenue) * 100 > -5 THEN 50
+    WHEN SAFE_DIVIDE(cm.revenue - pm.revenue, pm.revenue) * 100 > -10 THEN 30
+    ELSE 10
   END AS revenue_health_score,
   
+  -- Customer Health Score (based on segment distribution)
+  CASE
+    WHEN SAFE_DIVIDE(ch.champion_customers + ch.loyal_customers, ch.total_customers) > 0.15 THEN 100
+    WHEN SAFE_DIVIDE(ch.champion_customers + ch.loyal_customers, ch.total_customers) > 0.10 THEN 80
+    WHEN SAFE_DIVIDE(ch.champion_customers + ch.loyal_customers, ch.total_customers) > 0.05 THEN 60
+    WHEN SAFE_DIVIDE(ch.at_risk_customers + ch.lost_customers, ch.total_customers) > 0.30 THEN 30
+    ELSE 50
+  END AS customer_health_score,
+  
+  -- Operations Health Score (based on fulfillment time)
   CASE 
-    WHEN cm.avg_fulfillment_days < 3 THEN 100
+    WHEN cm.avg_fulfillment_days < 2 THEN 100
+    WHEN cm.avg_fulfillment_days < 3 THEN 90
     WHEN cm.avg_fulfillment_days < 5 THEN 75
-    WHEN cm.avg_fulfillment_days < 7 THEN 50
-    ELSE 25
+    WHEN cm.avg_fulfillment_days < 7 THEN 60
+    WHEN cm.avg_fulfillment_days < 10 THEN 40
+    ELSE 20
   END AS operations_health_score,
   
-  -- Metadados
+  -- Product Health Score (based on product mix)
+  CASE
+    WHEN SAFE_DIVIDE(ph.star_products, ph.total_products) > 0.20 THEN 100
+    WHEN SAFE_DIVIDE(ph.star_products, ph.total_products) > 0.15 THEN 85
+    WHEN SAFE_DIVIDE(ph.star_products, ph.total_products) > 0.10 THEN 70
+    WHEN SAFE_DIVIDE(ph.dormant_products, ph.total_products) > 0.30 THEN 30
+    ELSE 50
+  END AS product_health_score,
+  
+  -- Overall Health Score (weighted average)
+  ROUND(
+    (
+      CASE 
+        WHEN SAFE_DIVIDE(cm.revenue - pm.revenue, pm.revenue) * 100 > 15 THEN 100
+        WHEN SAFE_DIVIDE(cm.revenue - pm.revenue, pm.revenue) * 100 > 10 THEN 90
+        WHEN SAFE_DIVIDE(cm.revenue - pm.revenue, pm.revenue) * 100 > 5 THEN 80
+        WHEN SAFE_DIVIDE(cm.revenue - pm.revenue, pm.revenue) * 100 > 0 THEN 70
+        WHEN SAFE_DIVIDE(cm.revenue - pm.revenue, pm.revenue) * 100 > -5 THEN 50
+        WHEN SAFE_DIVIDE(cm.revenue - pm.revenue, pm.revenue) * 100 > -10 THEN 30
+        ELSE 10
+      END * 0.4  -- Revenue weight: 40%
+      +
+      CASE
+        WHEN SAFE_DIVIDE(ch.champion_customers + ch.loyal_customers, ch.total_customers) > 0.15 THEN 100
+        WHEN SAFE_DIVIDE(ch.champion_customers + ch.loyal_customers, ch.total_customers) > 0.10 THEN 80
+        WHEN SAFE_DIVIDE(ch.champion_customers + ch.loyal_customers, ch.total_customers) > 0.05 THEN 60
+        WHEN SAFE_DIVIDE(ch.at_risk_customers + ch.lost_customers, ch.total_customers) > 0.30 THEN 30
+        ELSE 50
+      END * 0.3  -- Customer weight: 30%
+      +
+      CASE 
+        WHEN cm.avg_fulfillment_days < 2 THEN 100
+        WHEN cm.avg_fulfillment_days < 3 THEN 90
+        WHEN cm.avg_fulfillment_days < 5 THEN 75
+        WHEN cm.avg_fulfillment_days < 7 THEN 60
+        WHEN cm.avg_fulfillment_days < 10 THEN 40
+        ELSE 20
+      END * 0.3  -- Operations weight: 30%
+    ), 0
+  ) AS overall_health_score,
+  
+  -- Processing metadata
   CURRENT_TIMESTAMP() AS data_processamento_gold
 
 FROM current_metrics cm
 CROSS JOIN previous_metrics pm
-CROSS JOIN customer_metrics custm
-CROSS JOIN product_metrics prodm
+CROSS JOIN customer_health ch
+CROSS JOIN product_health ph

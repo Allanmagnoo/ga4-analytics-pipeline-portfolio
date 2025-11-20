@@ -34,7 +34,6 @@ This project demonstrates a **complete end-to-end data engineering solution** im
 
 ### Medallion Layers
 
-<<<<<<< HEAD
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                    SOURCE: BigQuery Public Data                  │
@@ -106,127 +105,7 @@ One of the key differentiators of this project is the **comprehensive data quali
 ### Key Validations
 
 **Business Rule Examples:**
-=======
-## 📊 Dashboard (Looker Studio)
-
-Para demonstrar a aplicação prática e o valor de negócio dos dados da Camada Gold, um dashboard interativo foi criado no Looker Studio. Este painel permite a exploração dos KPIs de negócio, análise de rentabilidade de produtos e segmentação de clientes (RFM).
-
-[**Clique aqui para acessar o Dashboard Interativo**](https://lookerstudio.google.com/u/0/reporting/3f5e8dde-6737-45af-8922-31273f9de921/page/p_2jccde8nxd)
-
-## 📝 Decisões Técnicas e Raciocínio (O "Porquê?")
-
-Durante a implementação, foram tomadas decisões de engenharia para aumentar a robustez e o valor de negócio do pipeline:
-
-1.  **Cálculo de Idade Estimada (Tabela `slv_ecommerce_users`):**
-    > **Desafio:** A coluna `age` da fonte é um dado estático (idade no momento do cadastro), tornando-se obsoleta.
-    >
-    > **Solução:** Criei uma coluna `idade_atual_estimada` reconstruindo uma data de nascimento estimada (`DATE_SUB(created_at, INTERVAL age YEAR)`) e, em seguida, calculando a idade atual dinamicamente (`DATE_DIFF(CURRENT_DATE(), ...)`).
-    >
-    > **Valor:** Transforma um dado impreciso em uma métrica dinâmica e sempre precisa, crucial para segmentações de clientes por faixa etária.
-
-2.  **Cálculo de Margem Agregada (Tabela `gld_ecommerce_top_produtos`):**
-    > **Desafio:** O teste pedia a "margem média". Calcular `AVG(margem_percentual)` é analiticamente incorreto, pois distorce o resultado.
-    >
-    > **Solução:** Calculei a margem percentual agregada real: `SAFE_DIVIDE(SUM(margem_bruta_item), SUM(custo_total_item))`.
-    >
-    > **Valor:** Esta é uma métrica ponderada e muito mais precisa para a tomada de decisão do negócio sobre a rentabilidade real dos produtos.
-
-3.  **Correção de `NULL`s na Camada Gold (Tabela `gld_ecommerce_fato_vendas`):**
-    > **Desafio:** A tabela `gld_metricas_mensais_categoria` exibia uma grande linha com datas nulas, apesar de os dados na Bronze estarem completos.
-    >
-    > **Investigação:** A causa raiz foi um `LEFT JOIN` na `fato_vendas` que mantinha itens de pedidos `Cancelled` (que foram filtrados da `slv_orders`), gerando `NULL`s em todas as colunas de data.
-    >
-    > **Solução:** Mudei o `LEFT JOIN` para um `INNER JOIN` entre `slv_ecommerce_order_items` e `slv_ecommerce_orders`, garantindo que a `fato_vendas` contenha apenas vendas de pedidos válidos.
-    >
-    > **Valor:** Esta decisão de modelagem garante a integridade analítica de toda a Camada Gold.
-
-4.  **Enriquecimento da Tabela de Fatos (Tabela `gld_ecommerce_fato_vendas`):**
-    > **Desafio:** O time de performance precisa de segmentações que exigem `JOIN`s complexos na ferramenta de BI, causando lentidão.
-    >
-    > **Solução:** Enriqueci a `fato_vendas` diretamente no Dataform com dimensões pré-calculadas, como `user_faixa_etaria`, `tipo_cliente` ('Novo Cliente' vs. 'Recorrente', via `ROW_NUMBER()`) e `user_country`.
-    >
-    > **Valor:** Isso torna o dashboard extremamente rápido e centraliza a lógica de negócio no DWH, garantindo consistência em todas as análises.
-
-5.  **Otimização de BI (Tabela `gld_ecommerce_rfm_analise_categoria`):**
-    > **Desafio:** Responder "O que meus melhores clientes compram?" exigiria um "Data Blending" (mesclagem) complexo e lento no Looker Studio.
-    >
-    > **Solução:** Criei uma tabela Gold adicional que já cruza os segmentos RFM com as categorias de produtos que eles compraram, entregando a resposta pronta.
-    >
-    > **Valor:** O dashboard carrega instantaneamente, e a lógica de segmentação fica centralizada, padronizada e reutilizável.
-
-## 🚧 Principais Desafios Encontrados
-
-Durante o desenvolvimento do pipeline, o principal desafio não foi técnico, mas sim de **qualidade de dados na fonte**.
-
-> **Descoberta:** Após a construção da Camada Gold, a tabela `gld_ecommerce_top_produtos` revelou margens de lucro percentuais impossíveis (ex: 8.000% a 14.000%).
->
-> **Investigação:** A análise da fórmula de margem (`(Receita - Custo) / Custo`) provou que o **cálculo estava correto**. O problema residia nos dados da fonte: produtos com alto preço de venda (ex: R\$ 78,58) tinham um `cost` registrado de centavos (ex: R\$ 0,55).
->
-> **Conclusão:** O pipeline funcionou com sucesso, pois seu resultado expôs uma falha crítica de qualidade nos dados de custo do catálogo. Em um cenário real, este insight seria levado ao time de Compras/Catálogo para a correção dos dados de origem, provando o valor do pipeline como uma ferramenta de auditoria de dados.
-
-## ⚙️ Como Executar os Scripts
-
-O projeto é orquestrado pelo Dataform e foi configurado para ser executado de forma unificada.
-
-1.  Garanta que as permissões do Agente de Serviço do Dataform (`service-<ID>@gcp-sa-dataform.iam.gserviceaccount.com`) tenham os papéis de "Editor de Dados do BigQuery" e "Usuário de Job do BigQuery" no IAM.
-2.  No ambiente Dataform, clique no botão principal **"Start Execution"**.
-3.  Selecione a opção **"All actions"**.
-4.  Clique em **"Start execution"**. O Dataform analisará o grafo de dependências e executará todas as tabelas na ordem correta (Bronze → Silver → Gold).
-
-## 💡 Insights de Negócio (Baseado na Camada Gold)
-
-Abaixo estão os 3 principais insights extraídos da análise dos dashboards e das tabelas Gold, baseados nos fatos encontrados nos dados.
-
-1.  **Insight de Qualidade de Dados (Ação Imediata):**
-    > **Observação:** O pipeline expôs uma falha crítica na qualidade dos dados de custo (`cost`) da fonte. A análise da tabela `gld_top_produtos` revela margens de lucro irreais (ex: 14.000%) para produtos de alto volume, como "Pendleton Men's Pajama Set".
-    >
-    > **Ação Sugerida:** A prioridade número um é **auditar e corrigir os dados de custo na fonte** (`products`). Sem dados de custo confiáveis, qualquer análise de lucratividade da empresa estará fundamentalmente errada. O pipeline de dados provou seu valor como uma ferramenta de auditoria.
-
-2.  **Insight de Segmentação (Onde está o Valor):**
-    > **Observação:** A análise RFM (`gld_ecommerce_rfm_clientes`) revelou que os segmentos de clientes ativos de maior valor (ex: "Clientes Leais", "Em Risco") representam uma fatia minúscula da base total de clientes (menos de 7,3%), mas geram uma receita desproporcionalmente grande (somados, são **16,9%** de toda a receita).
-    >
-    > **Ação Sugerida:** O segmento "Clientes Leais" sozinho, embora seja uma pequena fração de clientes, gera **6,3%** da receita, tornando-os em média **3x a 6x mais valiosos** que um cliente comum. A prioridade de marketing não deve ser apenas reativar os "Adormecidos" (65.5% dos clientes), mas garantir a retenção VIP e o crescimento (up-sell) deste pequeno e hiper-valioso grupo de clientes leais.
-
-3.  **Insight de Risco (Recuperação de Clientes):**
-    > **Observação:** O segmento "Em Risco (Leais que sumiram)" é o segundo grupo mais valioso, responsável por **5.5%** da receita. Eles eram clientes leais que agora estão em risco de abandono.
-    >
-    > **Ação Sugerida:** Este segmento é o alvo perfeito para uma campanha de reativação imediata. Uma consulta de exemplo mostra que seu ticket médio era historicamente alto. Sugere-se uma campanha de e-mail direcionada oferecendo um desconto de "Estamos com saudades" para tentar recuperar esses clientes de alto valor antes que sejam perdidos para a concorrência.
-
-## 쿼리 Consultas de Exemplo (Para o Negócio)
-
-Abaixo estão exemplos de como as tabelas Gold podem ser usadas para responder a perguntas de negócio complexas de forma simples.
-
-**1. Identificar Clientes "Campeões" em Risco para Reativação Imediata:**
-
 ```sql
--- Identifica clientes de alto valor (top 20% em gastos) que eram leais
--- (frequência > 5) mas não compram há mais de 90 dias.
-SELECT
-  user_id,
-  recencia_dias,
-  frequencia,
-  valor_monetaria_total
-FROM
-  `datascience-451918.gld_ecommerce.gld_ecommerce_rfm_clientes`
-WHERE
-  recencia_dias > 90
-  AND frequencia > 5
-  AND valor_monetaria_total > (
-    -- Define "alto valor" como clientes no 80º percentil de gastos
-    SELECT
-      APPROX_QUANTILES(valor_monetaria_total, 100)[OFFSET(80)]
-    FROM
-      `datascience-451918.gld_ecommerce.gld_ecommerce_rfm_clientes`
-  )
-ORDER BY
-  valor_monetaria_total DESC;
-```
-
-2. Performance de Vendas (Receita vs. Margem) para a Faixa Etária "25-34" por Categoria:
-
->>>>>>> refs/heads/main
-```sql
-<<<<<<< HEAD
 -- Temporal consistency: Can't ship before creation
 WHEN order_shipped_at < order_created_at THEN 'TEMPORAL_ERROR'
 
@@ -235,35 +114,13 @@ WHEN product_cost > product_retail_price THEN 'MARGIN_NEGATIVE'
 
 -- COPPA compliance: Users under 13 flagged
 WHEN age < 13 THEN 'DEMOGRAPHIC_COMPLIANCE: COPPA violation'
-=======
--- Analisa quais categorias são mais lucrativas vs. mais populares
--- para a faixa etária de marketing mais cobiçada.
-SELECT
-  product_category,
-  SUM(valor_total_vendido) AS receita_total,
-  SAFE_DIVIDE(SUM(margem_bruta_item), SUM(custo_total_item)) * 100 AS margem_percentual_agregada
-FROM
-  `datascience-451918.gld_ecommerce.gld_ecommerce_fato_vendas`
-WHERE
-  user_faixa_etaria = '25-34'
-GROUP BY
-  1
-ORDER BY
-  receita_total DESC;
-
->>>>>>> refs/heads/main
 ```
 
-<<<<<<< HEAD
 **Impact:** These assertions caught **real data quality issues** in the public dataset, including:
 - Products with negative margins (cost > retail price)
 - Missing SKUs/product names
 - Invalid email formats
 - Temporal inconsistencies in order lifecycle
-=======
-
-## 📈 Diagrama de Fluxo
->>>>>>> refs/heads/main
 
 ---
 
@@ -285,7 +142,6 @@ ORDER BY
 ### 2. Cohort Analysis
 **File:** `gld_cohort_analysis.sqlx`
 
-<<<<<<< HEAD
 **Features:**
 - Monthly acquisition cohorts
 - Retention rate tracking over time
@@ -414,6 +270,180 @@ APPROX_QUANTILES(hours_to_ship, 100)[SAFE_OFFSET(95)] AS p95_hours_to_ship
 | **Total SQL Files** | 23 |
 | **Lines of Code** | ~3,500+ |
 | **Data Quality Checks** | 50+ |
+
+---
+
+## 📊 SQL Query Examples
+
+Below are tested BigQuery queries demonstrating how to extract business insights from the Gold layer tables.
+
+### Example 1: Top 10 Customers by Lifetime Value
+
+```sql
+-- Identify high-value customers for VIP programs
+SELECT
+  user_id,
+  country,
+  customer_segment,
+  total_revenue,
+  total_orders,
+  estimated_annual_clv,
+  CONCAT(
+    'Recency: ', recency_days, ' days | ',
+    'Frequency: ', frequency_segment, ' | ',
+    'Monetary: ', monetary_segment
+  ) AS rfm_profile
+FROM `datascience-473223.gld_ecommerce.gld_customer_lifetime_value`
+WHERE customer_segment IN ('Champions', 'Loyal Customers')
+ORDER BY total_revenue DESC
+LIMIT 10;
+```
+
+---
+
+### Example 2: Monthly Retention Rate by Cohort
+
+```sql
+-- Analyze customer retention patterns over time
+SELECT
+  cohort_month,
+  months_since_first_order,
+  cohort_size,
+  active_customers,
+  retention_rate,
+  cumulative_revenue_per_customer
+FROM `datascience-473223.gld_ecommerce.gld_cohort_analysis`
+WHERE cohort_month >= '2023-01-01'
+  AND months_since_first_order <= 12
+ORDER BY cohort_month DESC, months_since_first_order;
+```
+
+---
+
+### Example 3: Product Performance by Category
+
+```sql
+-- Find best and worst performing products by category
+WITH category_summary AS (
+  SELECT
+    category,
+    COUNT(*) AS total_products,
+    SUM(units_sold) AS category_units_sold,
+    SUM(total_revenue) AS category_revenue,
+    AVG(margin_percentage) AS avg_margin
+  FROM `datascience-473223.gld_ecommerce.gld_product_performance`
+  GROUP BY category
+)
+
+SELECT
+  p.category,
+  p.product_name,
+  p.performance_tier,
+  p.units_sold,
+  p.total_revenue,
+  p.margin_percentage,
+  p.return_rate,
+  ROUND(p.units_sold / cs.category_units_sold * 100, 2) AS pct_of_category_sales
+FROM `datascience-473223.gld_ecommerce.gld_product_performance` p
+INNER JOIN category_summary cs ON p.category = cs.category
+WHERE p.performance_tier IN ('Star', 'Slow Moving')
+ORDER BY p.category, p.total_revenue DESC;
+```
+
+---
+
+### Example 4: Daily Operations Dashboard Query
+
+```sql
+-- Monitor fulfillment efficiency and sales trends
+SELECT
+  order_date,
+  total_orders,
+  unique_customers,
+  total_revenue,
+  avg_order_value,
+  avg_hours_to_ship,
+  median_hours_to_ship,
+  p95_hours_to_ship,
+  cancellation_rate,
+  delivery_success_rate,
+  revenue_7day_ma,
+  revenue_wow_growth
+FROM `datascience-473223.gld_ecommerce.gld_daily_operations_kpi`
+WHERE order_date >= DATE_SUB(CURRENT_DATE(), INTERVAL 30 DAY)
+ORDER BY order_date DESC;
+```
+
+---
+
+### Example 5: RFM Segmentation Analysis
+
+```sql
+-- Analyze customer distribution and revenue by segment
+SELECT
+  seg.segmento_cliente,
+  COUNT(DISTINCT rfm.user_id) AS total_clientes, 
+  ROUND(COUNT(DISTINCT rfm.user_id) * 100.0 / SUM(COUNT(DISTINCT rfm.user_id)) OVER (), 2) AS pct_clientes,
+  SUM(rfm.valor_monetario_total) AS receita_total,
+  ROUND(SUM(rfm.valor_monetario_total) * 100.0 / SUM(SUM(rfm.valor_monetario_total)) OVER (), 2) AS pct_receita,
+  ROUND(AVG(rfm.valor_monetario_total), 2) AS ticket_medio,
+  ROUND(AVG(rfm.frequencia), 1) AS avg_frequencia,
+  ROUND(AVG(rfm.recencia_dias), 0) AS avg_recencia_dias
+FROM `datascience-473223.gld_ecommerce.gld_ecommerce_rfm_clientes` rfm
+INNER JOIN (
+  SELECT
+    user_id,
+    CASE
+      WHEN recencia_dias <= 30 AND frequencia >= 5 AND valor_monetario_total >= 1000 THEN '🏆 Campeões'
+      WHEN recencia_dias <= 60 AND frequencia >= 3 THEN '💚 Clientes Leais'
+      WHEN recencia_dias <= 45 AND frequencia = 1 THEN '⭐ Novos Clientes'
+      WHEN recencia_dias >= 120 AND frequencia > 3 THEN '💔 Em Risco (Leais que sumiram)'
+      WHEN recencia_dias >= 180 THEN '💤 Adormecidos'
+      ELSE 'Outros'
+    END AS segmento_cliente
+  FROM `datascience-473223.gld_ecommerce.gld_ecommerce_rfm_clientes`
+) seg ON rfm.user_id = seg.user_id
+GROUP BY segmento_cliente
+ORDER BY receita_total DESC;
+```
+
+---
+
+### Example 6: Executive Summary - Period Comparison
+
+```sql
+-- Get high-level business metrics with period-over-period comparison
+SELECT
+  period_label,
+  report_date,
+  
+  -- Revenue metrics
+  ROUND(current_revenue, 2) AS current_revenue,
+  ROUND(previous_revenue, 2) AS previous_revenue,
+  ROUND(revenue_growth_pct, 2) AS revenue_growth_pct,
+  
+  -- Order metrics
+  current_orders,
+  previous_orders,
+  ROUND(orders_growth_pct, 2) AS orders_growth_pct,
+  ROUND(avg_order_value, 2) AS avg_order_value,
+  
+  -- Customer health
+  current_active_customers,
+  total_customer_base,
+  champion_customers,
+  at_risk_customers,
+  
+  -- Product health
+  total_product_catalog,
+  star_products,
+  slow_moving_products,
+  
+  -- Health scores
+  revenue_health_score,
+  operations_health_score
+FROM `datascience-473223.gld_ecommerce.gld_executive_summary`;
+```
 
 ---
 
@@ -554,9 +584,10 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 👤 Author
 
-**Allan Magno**
-
-- Email: allanbortolosso@gmail.com
+**Your Name**
+- LinkedIn: [your-profile](https://linkedin.com/in/yourprofile)
+- Portfolio: [your-website.com](https://yourwebsite.com)
+- Email: your.email@example.com
 
 ---
 
@@ -569,5 +600,3 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ---
 
 **⭐ If this project helped you learn something new, please consider giving it a star!**
-=======
->>>>>>> refs/heads/main
