@@ -1,0 +1,126 @@
+config {
+  type: "assertion",
+  name: "assert_brz_ecommerce_no_duplicates",
+  tags: ["assertion", "ecommerce", "bronze", "data_quality", "duplicates", "critical"],
+  description: "Valida a unicidade de chaves primárias em todas as tabelas ecommerce. Duplicatas indicam problemas graves na ingestão de dados."
+}
+
+/*
+===================================================================
+Assertion: Primary Key Uniqueness Validation
+Objetivo: Garantir que não existem PKs duplicadas (violação de integridade referencial)
+===================================================================
+*/
+
+WITH orders_duplicates AS (
+  SELECT
+    'brz_ecommerce_orders' AS table_name,
+    'order_id' AS pk_column,
+    CAST(order_id AS STRING) AS primary_key,
+    COUNT(*) AS duplicate_count,
+    MIN(order_created_at) AS first_occurrence,
+    MAX(order_created_at) AS last_occurrence,
+    TO_JSON_STRING(ARRAY_AGG(DISTINCT order_status IGNORE NULLS)) AS context_data,
+    'PK_DUPLICATE: Violação de unicidade na tabela orders' AS severity
+  FROM ${ref("brz_ecommerce_orders")}
+  GROUP BY order_id
+  HAVING COUNT(*) > 1
+),
+
+order_items_duplicates AS (
+  SELECT
+    'brz_ecommerce_order_items' AS table_name,
+    'order_item_id' AS pk_column,
+    CAST(order_item_id AS STRING) AS primary_key,
+    COUNT(*) AS duplicate_count,
+    MIN(order_item_created_at) AS first_occurrence,
+    MAX(order_item_created_at) AS last_occurrence,
+    TO_JSON_STRING(ARRAY_AGG(DISTINCT CAST(order_id AS STRING) IGNORE NULLS LIMIT 10)) AS context_data,
+    'PK_DUPLICATE: Violação de unicidade na tabela order_items' AS severity
+  FROM ${ref("brz_ecommerce_order_items")}
+  GROUP BY order_item_id
+  HAVING COUNT(*) > 1
+),
+
+users_duplicates AS (
+  SELECT
+    'brz_ecommerce_users' AS table_name,
+    'user_id' AS pk_column,
+    CAST(user_id AS STRING) AS primary_key,
+    COUNT(*) AS duplicate_count,
+    MIN(user_created_at) AS first_occurrence,
+    MAX(user_created_at) AS last_occurrence,
+    TO_JSON_STRING(ARRAY_AGG(DISTINCT user_email IGNORE NULLS LIMIT 5)) AS context_data,
+    'PK_DUPLICATE: Violação de unicidade na tabela users' AS severity
+  FROM ${ref("brz_ecommerce_users")}
+  GROUP BY user_id
+  HAVING COUNT(*) > 1
+),
+
+products_duplicates AS (
+  SELECT
+    'brz_ecommerce_products' AS table_name,
+    'product_id' AS pk_column,
+    CAST(product_id AS STRING) AS primary_key,
+    COUNT(*) AS duplicate_count,
+    CAST(NULL AS TIMESTAMP) AS first_occurrence,
+    CAST(NULL AS TIMESTAMP) AS last_occurrence,
+    TO_JSON_STRING(ARRAY_AGG(DISTINCT product_name IGNORE NULLS LIMIT 3)) AS context_data,
+    'PK_DUPLICATE: Violação de unicidade na tabela products' AS severity
+  FROM ${ref("brz_ecommerce_products")}
+  GROUP BY product_id
+  HAVING COUNT(*) > 1
+)
+
+-- União de todos os resultados
+SELECT 
+  table_name,
+  pk_column,
+  primary_key,
+  duplicate_count,
+  severity,
+  first_occurrence,
+  last_occurrence,
+  context_data
+FROM orders_duplicates
+
+UNION ALL
+
+SELECT 
+  table_name,
+  pk_column,
+  primary_key,
+  duplicate_count,
+  severity,
+  first_occurrence,
+  last_occurrence,
+  context_data
+FROM order_items_duplicates
+
+UNION ALL
+
+SELECT 
+  table_name,
+  pk_column,
+  primary_key,
+  duplicate_count,
+  severity,
+  first_occurrence,
+  last_occurrence,
+  context_data
+FROM users_duplicates
+
+UNION ALL
+
+SELECT 
+  table_name,
+  pk_column,
+  primary_key,
+  duplicate_count,
+  severity,
+  first_occurrence,
+  last_occurrence,
+  context_data
+FROM products_duplicates
+
+ORDER BY duplicate_count DESC, table_name

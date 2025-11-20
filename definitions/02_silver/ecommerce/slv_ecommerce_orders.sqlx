@@ -1,37 +1,77 @@
 config {
-  type: "table",
+  type: "incremental",
   schema: dataform.projectConfig.vars.silver_ecommerce_bq,
-  tags: ["silver", "ecommerce", "orders"]
+  name: "slv_ecommerce_orders",
+  uniqueKey: ["order_id"],
+  bigquery: {
+    partitionBy: "DATE(created_at)",
+    clusterBy: ["order_status", "user_id"]
+  },
+  tags: ["silver", "ecommerce", "orders"],
+  description: "Camada Silver de Pedidos: Dados limpos, padronizados e enriquecidos com métricas de tempo de ciclo."
 }
 
--- CTE para definir a data do pedido usando uma lógica de fallback
-WITH orders_with_coalesced_date AS (
-    SELECT
-        *,
-        -- Tenta preencher a data do pedido com created_at, depois shipped_at, depois delivered_at
-        COALESCE(created_at, shipped_at, delivered_at) AS data_pedido_coalesced
-    FROM
-        ${ref("brz_ecommerce_orders")}
+/*
+===================================================================
+Camada Silver - Orders
+Objetivo: Limpeza, padronização e cálculo de métricas de processo.
+===================================================================
+*/
+
+WITH source AS (
+  SELECT
+    *
+  FROM
+    ${ref("brz_ecommerce_orders")}
+  ${when(incremental(),
+    `WHERE order_created_at >= (
+      SELECT 
+        DATE_SUB(
+          COALESCE(MAX(order_created_at), CURRENT_TIMESTAMP()),
+          INTERVAL CAST(${dataform.projectConfig.vars.incremental_window_days} AS INT64) DAY
+        )
+      FROM ${self()}
+    )`
+  )}
 )
 
 SELECT
-    order_id,
-    user_id,
-    status,
-    CAST(data_pedido_coalesced AS DATE) AS data_pedido,
-    EXTRACT(YEAR FROM data_pedido_coalesced) AS ano_pedido,
-    EXTRACT(MONTH FROM data_pedido_coalesced) AS mes_pedido,
-    gender,
-    returned_at,
-    shipped_at,
-    num_of_item
+  -- Identificadores
+  order_id,
+  user_id,
+
+  -- Status Padronizado
+  UPPER(order_status) AS order_status,
+  
+  -- Datas
+  order_created_at AS created_at,
+  order_returned_at AS returned_at,
+  order_shipped_at AS shipped_at,
+  order_delivered_at AS delivered_at,
+
+  -- Métricas de Processo (Cycle Times)
+  TIMESTAMP_DIFF(order_shipped_at, order_created_at, HOUR) AS hours_to_ship,
+  TIMESTAMP_DIFF(order_delivered_at, order_shipped_at, HOUR) AS hours_to_deliver,
+  TIMESTAMP_DIFF(order_delivered_at, order_created_at, DAY) AS days_to_complete,
+
+  -- Métricas do Pedido
+  order_num_of_item AS number_of_items,
+
+  -- Flags de Negócio
+  is_cancelled,
+  is_returned,
+  is_delivered,
+  
+  CASE 
+    WHEN TIMESTAMP_DIFF(order_shipped_at, order_created_at, DAY) > 3 THEN TRUE 
+    ELSE FALSE 
+  END AS is_delayed_shipping,
+
+  -- Metadados
+  CURRENT_TIMESTAMP() AS data_processamento_silver
+
 FROM
-    orders_with_coalesced_date
+  source
 WHERE
-    status != 'Cancelled'
-    AND order_id IS NOT NULL
-    -- ESTA É A LINHA CRUCIAL:
-    -- Se, mesmo após o COALESCE, a data for nula (porque os dados são irrecuperáveis),
-    -- NÓS REMOVEMOS A LINHA. Isso garante que apenas dados de qualidade
-    -- cheguem à Camada Silver.
-    AND data_pedido_coalesced IS NOT NULL
+  order_id IS NOT NULL 
+  AND user_id IS NOT NULL

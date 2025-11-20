@@ -1,0 +1,132 @@
+config {
+  type: "table",
+  schema: dataform.projectConfig.vars.gold_ecommerce_bq,
+  name: "gld_customer_lifetime_value",
+  bigquery: {
+    partitionBy: "DATE(first_purchase_date)",
+    clusterBy: ["customer_segment", "country"]
+  },
+  tags: ["gold", "ecommerce", "analytics", "clv"],
+  description: "Análise de Customer Lifetime Value (CLV) com segmentação de clientes e métricas de retenção."
+}
+
+/*
+===================================================================
+Gold Layer - Customer Lifetime Value (CLV)
+Objetivo: Métricas de valor do cliente ao longo do tempo
+===================================================================
+*/
+
+WITH order_intervals AS (
+  SELECT
+    user_id,
+    order_id,
+    created_at,
+    -- Calculate interval between orders for each user
+    TIMESTAMP_DIFF(created_at, LAG(created_at) OVER (PARTITION BY user_id ORDER BY created_at), DAY) AS days_since_prev_order
+  FROM ${ref("slv_ecommerce_orders")}
+  WHERE NOT is_cancelled
+),
+
+customer_orders AS (
+  SELECT
+    o.user_id,
+    u.country,
+    u.traffic_source,
+    u.created_at AS customer_since,
+    
+    -- Primeira e última compra
+    MIN(o.created_at) AS first_purchase_date,
+    MAX(o.created_at) AS last_purchase_date,
+    
+    -- Métricas de pedidos
+    COUNT(DISTINCT o.order_id) AS total_orders,
+    COUNT(DISTINCT CASE WHEN o.is_cancelled THEN o.order_id END) AS cancelled_orders,
+    COUNT(DISTINCT CASE WHEN o.is_returned THEN o.order_id END) AS returned_orders,
+    
+    -- Métricas financeiras
+    SUM(oi.sale_price) AS total_revenue,
+    AVG(oi.sale_price) AS avg_order_value,
+    
+    -- Tempo médio entre pedidos (agora calculado corretamente a partir da CTE)
+    AVG(intv.days_since_prev_order) AS avg_days_between_orders
+    
+  FROM ${ref("slv_ecommerce_orders")} o
+  INNER JOIN ${ref("slv_ecommerce_order_items")} oi ON o.order_id = oi.order_id
+  INNER JOIN ${ref("slv_ecommerce_users")} u ON o.user_id = u.user_id
+  LEFT JOIN order_intervals intv ON o.order_id = intv.order_id
+  WHERE NOT o.is_cancelled
+  GROUP BY 1,2,3,4
+),
+
+customer_metrics AS (
+  SELECT
+    *,
+    
+    -- Recency (dias desde última compra)
+    DATE_DIFF(CURRENT_DATE(), DATE(last_purchase_date), DAY) AS recency_days,
+    
+    -- Frequency (frequência de compra)
+    CASE
+      WHEN total_orders = 1 THEN 'One-time'
+      WHEN total_orders BETWEEN 2 AND 5 THEN 'Regular'
+      WHEN total_orders > 5 THEN 'VIP'
+    END AS frequency_segment,
+    
+    -- Monetary (valor total gasto)
+    CASE
+      WHEN total_revenue < 100 THEN 'Low Value'
+      WHEN total_revenue BETWEEN 100 AND 500 THEN 'Medium Value'
+      WHEN total_revenue > 500 THEN 'High Value'
+    END AS monetary_segment,
+    
+    -- Lifetime (tempo como cliente em dias)
+    DATE_DIFF(CURRENT_DATE(), DATE(customer_since), DAY) AS customer_lifetime_days
+    
+  FROM customer_orders
+)
+
+SELECT
+  user_id,
+  country,
+  traffic_source,
+  customer_since,
+  first_purchase_date,
+  last_purchase_date,
+  
+  -- Métricas de pedidos
+  total_orders,
+  cancelled_orders,
+  returned_orders,
+  SAFE_DIVIDE(cancelled_orders, total_orders) * 100 AS cancellation_rate,
+  SAFE_DIVIDE(returned_orders, total_orders) * 100 AS return_rate,
+  
+  -- Métricas financeiras
+  total_revenue,
+  avg_order_value,
+  avg_days_between_orders,
+  
+  -- CLV estimado (revenue por tempo de vida)
+  SAFE_DIVIDE(total_revenue, NULLIF(customer_lifetime_days, 0)) * 365 AS estimated_annual_clv,
+  
+  -- RFM Segmentation
+  recency_days,
+  frequency_segment,
+  monetary_segment,
+  
+  -- Segmentação combinada RFM
+  CASE
+    WHEN recency_days <= 30 AND frequency_segment = 'VIP' AND monetary_segment = 'High Value' THEN 'Champions'
+    WHEN recency_days <= 60 AND frequency_segment IN ('Regular', 'VIP') THEN 'Loyal Customers'
+    WHEN frequency_segment = 'One-time' AND recency_days > 180 THEN 'Lost'
+    WHEN recency_days > 90 THEN 'At Risk'
+    WHEN frequency_segment = 'One-time' AND recency_days <= 90 THEN 'New Customers'
+    ELSE 'Potential'
+  END AS customer_segment,
+  
+  customer_lifetime_days,
+  
+  -- Metadados
+  CURRENT_TIMESTAMP() AS data_processamento_gold
+
+FROM customer_metrics

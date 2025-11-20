@@ -1,0 +1,147 @@
+config {
+  type: "table",
+  schema: dataform.projectConfig.vars.gold_ecommerce_bq,
+  name: "gld_product_performance",
+  bigquery: {
+    clusterBy: ["category", "margin_category", "performance_tier"]
+  },
+  tags: ["gold", "ecommerce", "analytics", "products"],
+  description: "Análise de performance de produtos com métricas de vendas, margem e popularidade."
+}
+
+/*
+===================================================================
+Gold Layer - Product Performance
+Objetivo: Métricas de desempenho de produtos para merchandising
+===================================================================
+*/
+
+WITH product_sales AS (
+  SELECT
+    p.product_id,
+    p.product_name,
+    p.category,
+    p.brand,
+    p.department,
+    p.cost,
+    p.retail_price,
+    p.gross_margin,
+    p.margin_percentage,
+    p.margin_category,
+    
+    -- Métricas de vendas
+    COUNT(DISTINCT oi.order_id) AS total_orders,
+    COUNT(oi.order_item_id) AS units_sold,
+    SUM(oi.sale_price) AS total_revenue,
+    AVG(oi.sale_price) AS avg_selling_price,
+    
+    -- Taxa de retorno
+    COUNT(DISTINCT CASE WHEN oi.is_returned THEN oi.order_item_id END) AS units_returned,
+    COUNT(DISTINCT CASE WHEN oi.is_cancelled THEN oi.order_item_id END) AS units_cancelled,
+    
+    -- Clientes únicos
+    COUNT(DISTINCT oi.user_id) AS unique_customers,
+    
+    -- Performance temporal
+    MIN(oi.created_at) AS first_sale_date,
+    MAX(oi.created_at) AS last_sale_date
+    
+  FROM ${ref("slv_ecommerce_products")} p
+  LEFT JOIN ${ref("slv_ecommerce_order_items")} oi ON p.product_id = oi.product_id
+  GROUP BY 1,2,3,4,5,6,7,8,9,10
+),
+
+product_metrics AS (
+  SELECT
+    *,
+    
+    -- Total profit (margem bruta * unidades vendidas)
+    gross_margin * units_sold AS total_profit,
+    
+    -- Taxa de retorno
+    SAFE_DIVIDE(units_returned, NULLIF(units_sold, 0)) * 100 AS return_rate,
+    
+    -- Velocidade de venda (unidades por dia)
+    SAFE_DIVIDE(
+      units_sold,
+      NULLIF(DATE_DIFF(CURRENT_DATE(), DATE(first_sale_date), DAY), 0)
+    ) AS units_per_day,
+    
+    -- Desconto médio oferecido
+    CASE 
+      WHEN avg_selling_price < retail_price THEN 
+        ((retail_price - avg_selling_price) / retail_price) * 100
+      ELSE 0
+    END AS avg_discount_percentage
+    
+  FROM product_sales
+  WHERE units_sold > 0  -- Apenas produtos que foram vendidos
+),
+
+category_benchmarks AS (
+  SELECT
+    category,
+    AVG(units_sold) AS category_avg_units,
+    AVG(total_revenue) AS category_avg_revenue,
+    -- Using APPROX_QUANTILES for percentile aggregation within GROUP BY
+    APPROX_QUANTILES(units_sold, 100)[SAFE_OFFSET(75)] AS category_75th_percentile_units
+  FROM product_metrics
+  GROUP BY 1
+)
+
+SELECT
+  pm.product_id,
+  pm.product_name,
+  pm.category,
+  pm.brand,
+  pm.department,
+  
+  -- Pricing
+  pm.cost,
+  pm.retail_price,
+  pm.avg_selling_price,
+  pm.avg_discount_percentage,
+  
+  -- Margins
+  pm.gross_margin,
+  pm.margin_percentage,
+  pm.margin_category,
+  
+  -- Sales Performance
+  pm.total_orders,
+  pm.units_sold,
+  pm.total_revenue,
+  pm.total_profit,
+  pm.unique_customers,
+  pm.units_per_day,
+  
+  -- Quality Metrics
+  pm.return_rate,
+  pm.units_returned,
+  pm.units_cancelled,
+  
+  -- Time metrics
+  pm.first_sale_date,
+  pm.last_sale_date,
+  DATE_DIFF(CURRENT_DATE(), DATE(pm.last_sale_date), DAY) AS days_since_last_sale,
+  
+  -- Performance vs Category
+  pm.units_sold - cb.category_avg_units AS units_vs_category_avg,
+  
+  -- Performance Tier
+  CASE
+    WHEN pm.units_sold >= cb.category_75th_percentile_units AND pm.margin_percentage > 30 THEN 'Star' 
+    WHEN pm.units_sold >= cb.category_75th_percentile_units THEN 'High Volume'
+    WHEN pm.margin_percentage > 40 THEN 'High Margin'
+    WHEN pm.units_sold < cb.category_avg_units / 2 THEN 'Slow Moving'
+    WHEN DATE_DIFF(CURRENT_DATE(), DATE(pm.last_sale_date), DAY) > 90 THEN 'Dormant'
+    ELSE 'Standard'
+  END AS performance_tier,
+  
+  -- Metadados
+  CURRENT_TIMESTAMP() AS data_processamento_gold
+
+FROM product_metrics pm
+LEFT JOIN category_benchmarks cb ON pm.category = cb.category
+
+

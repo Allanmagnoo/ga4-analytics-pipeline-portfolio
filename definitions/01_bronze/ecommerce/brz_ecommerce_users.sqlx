@@ -1,11 +1,111 @@
 config {
-    type: "table",
+    type: "incremental",
     schema: dataform.projectConfig.vars.bronze_ecommerce_bq,
-    tags: ["bronze", "ecommerce", "users"]
+    name: "brz_ecommerce_users",
+    uniqueKey: ["user_id"],
+    bigquery: {
+        partitionBy: "DATE(user_created_at)",
+        clusterBy: ["user_country", "user_state", "user_traffic_source"]
+    },
+    tags: ["bronze", "ecommerce", "users", "dimension"],
+    description: "Tabela incremental de usuários da camada Bronze - Dados brutos do thelook_ecommerce"
 }
 
+/*
+===================================================================
+Camada Bronze - Users (thelook_ecommerce)
+Estratégia: Carga incremental (novos cadastros)
+===================================================================
+*/
+
 SELECT
-  *,
+  -- ========================================
+  -- IDENTIFICADORES
+  -- ========================================
+  id AS user_id,
+  
+  -- ========================================
+  -- INFORMAÇÕES PESSOAIS
+  -- ========================================
+  first_name AS user_first_name,
+  last_name AS user_last_name,
+  CONCAT(first_name, ' ', last_name) AS user_full_name,
+  email AS user_email,
+  age AS user_age,
+  gender AS user_gender,
+  
+  -- ========================================
+  -- LOCALIZAÇÃO
+  -- ========================================
+  country AS user_country,
+  state AS user_state,
+  city AS user_city,
+  postal_code AS user_postal_code,
+  street_address AS user_street_address,
+  latitude AS user_latitude,
+  longitude AS user_longitude,
+  
+  -- ========================================
+  -- ATRIBUIÇÃO E ORIGEM
+  -- ========================================
+  traffic_source AS user_traffic_source,
+  created_at AS user_created_at,
+  
+  -- ========================================
+  -- SEGMENTAÇÃO DEMOGRÁFICA
+  -- ========================================
+  CASE 
+    WHEN age < 18 THEN '0-17'
+    WHEN age BETWEEN 18 AND 24 THEN '18-24'
+    WHEN age BETWEEN 25 AND 34 THEN '25-34'
+    WHEN age BETWEEN 35 AND 44 THEN '35-44'
+    WHEN age BETWEEN 45 AND 54 THEN '45-54'
+    WHEN age BETWEEN 55 AND 64 THEN '55-64'
+    WHEN age >= 65 THEN '65+'
+    ELSE 'Unknown'
+  END AS age_group,
+  
+  -- ========================================
+  -- FLAGS DE QUALIDADE
+  -- ========================================
+  CASE 
+    WHEN email IS NULL OR NOT REGEXP_CONTAINS(email, r'^[^@]+@[^@]+\.[^@]+$') THEN TRUE 
+    ELSE FALSE 
+  END AS has_invalid_email,
+  
+  CASE 
+    WHEN age IS NULL OR age < 0 OR age > 120 THEN TRUE 
+    ELSE FALSE 
+  END AS has_invalid_age,
+  
+  CASE 
+    WHEN latitude IS NULL OR longitude IS NULL THEN TRUE 
+    ELSE FALSE 
+  END AS has_missing_location,
+  
+  -- ========================================
+  -- METADADOS DE AUDITORIA
+  -- ========================================
   CURRENT_TIMESTAMP() AS data_ingestao
-FROM
-  ${ref("users")}
+
+FROM (
+  SELECT
+    *,
+    ROW_NUMBER() OVER (
+      PARTITION BY id 
+      ORDER BY created_at DESC
+    ) AS dedup_row_num
+  FROM
+    ${ref("users")}
+  ${when(incremental(),
+    `WHERE created_at >= (
+      SELECT 
+        DATE_SUB(
+          COALESCE(MAX(created_at), CURRENT_TIMESTAMP()),
+          INTERVAL CAST(${dataform.projectConfig.vars.incremental_window_days} AS INT64) DAY
+        )
+      FROM ${self()}
+    )`
+  )}
+)
+WHERE dedup_row_num = 1

@@ -1,0 +1,124 @@
+config {
+  type: "table",
+  schema: dataform.projectConfig.vars.gold_ecommerce_bq,
+  name: "gld_daily_operations_kpi",
+  bigquery: {
+    partitionBy: "order_date",
+    clusterBy: ["order_date"]
+  },
+  tags: ["gold", "ecommerce", "analytics", "kpi", "operations"],
+  description: "KPIs operacionais diários para monitoramento de performance de fulfillment e operações."
+}
+
+/*
+===================================================================
+Gold Layer - Daily Operations KPIs
+Objetivo: Métricas operacionais para dashboards executivos
+===================================================================
+*/
+
+WITH daily_orders AS (
+  SELECT
+    DATE(created_at) AS order_date,
+    
+    -- Volume metrics
+    COUNT(DISTINCT order_id) AS total_orders,
+    COUNT(DISTINCT user_id) AS unique_customers,
+    SUM(number_of_items) AS total_items,
+    
+    -- Status breakdown
+    COUNT(DISTINCT CASE WHEN is_cancelled THEN order_id END) AS cancelled_orders,
+    COUNT(DISTINCT CASE WHEN is_returned THEN order_id END) AS returned_orders,
+    COUNT(DISTINCT CASE WHEN is_delivered THEN order_id END) AS delivered_orders,
+    
+    -- Timing metrics (em horas)
+    AVG(hours_to_ship) AS avg_hours_to_ship,
+    
+    -- Percentiles using APPROX_QUANTILES for aggregation compatibility
+    APPROX_QUANTILES(hours_to_ship, 100)[SAFE_OFFSET(50)] AS median_hours_to_ship,
+    APPROX_QUANTILES(hours_to_ship, 100)[SAFE_OFFSET(95)] AS p95_hours_to_ship,
+    
+    AVG(hours_to_deliver) AS avg_hours_to_deliver,
+    AVG(days_to_complete) AS avg_days_to_complete,
+    
+    -- Delayed shipments
+    COUNT(DISTINCT CASE WHEN is_delayed_shipping THEN order_id END) AS delayed_shipments
+    
+  FROM ${ref("slv_ecommerce_orders")}
+  GROUP BY 1
+),
+
+daily_revenue AS (
+  SELECT
+    DATE(oi.created_at) AS order_date,
+    SUM(oi.sale_price) AS total_revenue,
+    AVG(oi.sale_price) AS avg_order_item_value,
+    
+    -- Category breakdown
+    COUNT(DISTINCT CASE WHEN p.category = 'ACCESSORIES' THEN oi.order_item_id END) AS accessories_items,
+    COUNT(DISTINCT CASE WHEN p.category = 'ACTIVE' THEN oi.order_item_id END) AS active_items
+    
+  FROM ${ref("slv_ecommerce_order_items")} oi
+  INNER JOIN ${ref("slv_ecommerce_products")} p ON oi.product_id = p.product_id
+  WHERE NOT oi.is_cancelled
+  GROUP BY 1
+),
+
+daily_customers AS (
+  SELECT
+    DATE(o.created_at) AS order_date,
+    COUNT(DISTINCT CASE WHEN DATE(u.created_at) = DATE(o.created_at) THEN o.user_id END) AS new_customers,
+    COUNT(DISTINCT CASE WHEN DATE(u.created_at) < DATE(o.created_at) THEN o.user_id END) AS returning_customers
+  FROM ${ref("slv_ecommerce_orders")} o
+  INNER JOIN ${ref("slv_ecommerce_users")} u ON o.user_id = u.user_id
+  GROUP BY 1
+)
+
+SELECT
+  do.order_date,
+  
+  -- Volume KPIs
+  do.total_orders,
+  do.unique_customers,
+  do.total_items,
+  SAFE_DIVIDE(do.total_items, do.total_orders) AS items_per_order,
+  
+  -- Customer acquisition
+  dc.new_customers,
+  dc.returning_customers,
+  SAFE_DIVIDE(dc.new_customers, do.unique_customers) * 100 AS new_customer_rate,
+  
+  -- Revenue KPIs
+  dr.total_revenue,
+  SAFE_DIVIDE(dr.total_revenue, do.total_orders) AS avg_order_value,
+  dr.avg_order_item_value,
+  
+  -- Operational efficiency
+  do.avg_hours_to_ship,
+  do.median_hours_to_ship,
+  do.p95_hours_to_ship,
+  do.avg_hours_to_deliver,
+  do.avg_days_to_complete,
+  
+  -- Performance indicators
+  SAFE_DIVIDE(do.cancelled_orders, do.total_orders) * 100 AS cancellation_rate,
+  SAFE_DIVIDE(do.returned_orders, do.total_orders) * 100 AS return_rate,
+  SAFE_DIVIDE(do.delivered_orders, do.total_orders) * 100 AS delivery_success_rate,
+  SAFE_DIVIDE(do.delayed_shipments, do.total_orders) * 100 AS delayed_shipment_rate,
+  
+  -- 7-day moving averages for trending
+  AVG(dr.total_revenue) OVER (ORDER BY do.order_date ROWS BETWEEN 6 PRECEDING AND CURRENT ROW) AS revenue_7day_ma,
+  AVG(do.total_orders) OVER (ORDER BY do.order_date ROWS BETWEEN 6 PRECEDING AND CURRENT ROW) AS orders_7day_ma,
+  
+  -- Week-over-week growth
+  SAFE_DIVIDE(
+    dr.total_revenue - LAG(dr.total_revenue, 7) OVER (ORDER BY do.order_date),
+    NULLIF(LAG(dr.total_revenue, 7) OVER (ORDER BY do.order_date), 0)
+  ) * 100 AS revenue_wow_growth,
+  
+  -- Metadados
+  CURRENT_TIMESTAMP() AS data_processamento_gold
+
+FROM daily_orders do
+LEFT JOIN daily_revenue dr ON do.order_date = dr.order_date
+LEFT JOIN daily_customers dc ON do.order_date = dc.order_date

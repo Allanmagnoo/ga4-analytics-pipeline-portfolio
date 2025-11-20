@@ -1,0 +1,109 @@
+config {
+  type: "table",
+  schema: dataform.projectConfig.vars.gold_ecommerce_bq,
+  name: "gld_cohort_analysis",
+  bigquery: {
+    partitionBy: "cohort_month",
+    clusterBy: ["cohort_month"]
+  },
+  tags: ["gold", "ecommerce", "analytics", "cohort"],
+  description: "Análise de cohort para entender retenção de clientes ao longo do tempo."
+}
+
+/*
+===================================================================
+Gold Layer - Cohort Analysis
+Objetivo: Análise de retenção de clientes por cohort mensal
+===================================================================
+*/
+
+WITH customer_cohorts AS (
+  SELECT
+    user_id,
+    DATE_TRUNC(DATE(MIN(created_at)), MONTH) AS cohort_month,
+    MIN(created_at) AS first_order_date
+  FROM ${ref("slv_ecommerce_orders")}
+  WHERE NOT is_cancelled
+  GROUP BY user_id
+),
+
+order_months AS (
+  SELECT
+    o.user_id,
+    cc.cohort_month,
+    DATE_TRUNC(DATE(o.created_at), MONTH) AS order_month,
+    COUNT(DISTINCT o.order_id) AS orders_in_month,
+    SUM(oi.sale_price) AS revenue_in_month
+  FROM ${ref("slv_ecommerce_orders")} o
+  INNER JOIN ${ref("slv_ecommerce_order_items")} oi ON o.order_id = oi.order_id
+  INNER JOIN customer_cohorts cc ON o.user_id = cc.user_id
+  WHERE NOT o.is_cancelled
+  GROUP BY 1,2,3
+),
+
+cohort_metrics AS (
+  SELECT
+    cohort_month,
+    order_month,
+    
+    -- Mês relativo ao cohort (0 = mês de aquisição, 1 = primeiro mês após, etc)
+    DATE_DIFF(order_month, cohort_month, MONTH) AS months_since_first_order,
+    
+    -- Métricas agregadas
+    COUNT(DISTINCT user_id) AS active_customers,
+    SUM(orders_in_month) AS total_orders,
+    SUM(revenue_in_month) AS total_revenue,
+    AVG(revenue_in_month) AS avg_revenue_per_customer
+    
+  FROM order_months
+  GROUP BY 1,2,3
+),
+
+cohort_sizes AS (
+  SELECT
+    cohort_month,
+    COUNT(DISTINCT user_id) AS cohort_size,
+    SUM(revenue_in_month) AS cohort_first_month_revenue
+  FROM order_months
+  WHERE order_month = cohort_month
+  GROUP BY 1
+)
+
+SELECT
+  cm.cohort_month,
+  cm.order_month,
+  cm.months_since_first_order,
+  
+  -- Size metrics
+  cs.cohort_size,
+  cm.active_customers,
+  
+  -- Retention rate
+  SAFE_DIVIDE(cm.active_customers, cs.cohort_size) * 100 AS retention_rate,
+  
+  -- Revenue metrics
+  cm.total_orders,
+  cm.total_revenue,
+  cm.avg_revenue_per_customer,
+  
+  -- Cumulative LTV
+  SUM(cm.total_revenue) OVER (
+    PARTITION BY cm.cohort_month 
+    ORDER BY cm.months_since_first_order
+    ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+  ) AS cumulative_revenue,
+  
+  SAFE_DIVIDE(
+    SUM(cm.total_revenue) OVER (
+      PARTITION BY cm.cohort_month 
+      ORDER BY cm.months_since_first_order
+      ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+    ),
+    cs.cohort_size
+  ) AS cumulative_revenue_per_customer,
+  
+  -- Metadados
+  CURRENT_TIMESTAMP() AS data_processamento_gold
+
+FROM cohort_metrics cm
+INNER JOIN cohort_sizes cs ON cm.cohort_month = cs.cohort_month

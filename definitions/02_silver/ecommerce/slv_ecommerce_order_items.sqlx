@@ -1,39 +1,69 @@
 config {
-    type: "table",
-    schema: dataform.projectConfig.vars.silver_ecommerce_bq,
-    tags: ["silver", "ecommerce", "order_items"]
+  type: "incremental",
+  schema: dataform.projectConfig.vars.silver_ecommerce_bq,
+  name: "slv_ecommerce_order_items",
+  uniqueKey: ["order_item_id"],
+  bigquery: {
+    partitionBy: "DATE(created_at)",
+    clusterBy: ["product_id", "order_id"]
+  },
+  tags: ["silver", "ecommerce", "order_items"],
+  description: "Camada Silver de Itens de Pedidos: Dados limpos e enriquecidos com totais calculados."
 }
 
-  -- CTE para ranquear os itens e permitir a deduplicação
-WITH
-  ranked_items AS (
+/*
+===================================================================
+Camada Silver - Order Items
+Objetivo: Limpeza e preparação para joins com produtos.
+===================================================================
+*/
+
+WITH source AS (
   SELECT
-    *,
-    -- Se houver IDs duplicados, esta função nos permite pegar apenas o mais recente
-    ROW_NUMBER() OVER(PARTITION BY id ORDER BY data_ingestao DESC) AS rank_n
+    *
   FROM
     ${ref("brz_ecommerce_order_items")}
-  WHERE
-    -- Regra de negócio: Preço de venda deve ser válido e positivo
-    sale_price IS NOT NULL
-    AND sale_price > 0 )
+  ${when(incremental(),
+    `WHERE order_item_created_at >= (
+      SELECT 
+        DATE_SUB(
+          COALESCE(MAX(order_item_created_at), CURRENT_TIMESTAMP()),
+          INTERVAL CAST(${dataform.projectConfig.vars.incremental_window_days} AS INT64) DAY
+        )
+      FROM ${self()}
+    )`
+  )}
+)
+
 SELECT
-  id,
+  -- Identificadores
+  order_item_id,
   order_id,
   user_id,
   product_id,
   inventory_item_id,
-  status,
-  created_at,
-  shipped_at,
-  delivered_at,
-  returned_at,
-  sale_price,
-  -- Decisão Técnica: A tabela original não possui campo 'quantidade'.
-  -- Assumimos que cada linha representa um único item (quantidade = 1).
-  sale_price AS valor_total_item
+
+  -- Status
+  UPPER(order_item_status) AS item_status,
+
+  -- Datas
+  order_item_created_at AS created_at,
+  order_item_shipped_at AS shipped_at,
+  order_item_delivered_at AS delivered_at,
+  order_item_returned_at AS returned_at,
+
+  -- Valores Financeiros
+  COALESCE(order_item_sale_price, 0) AS sale_price,
+
+  -- Flags
+  is_cancelled,
+  is_returned,
+  is_delivered,
+  
+  -- Metadados
+  CURRENT_TIMESTAMP() AS data_processamento_silver
+
 FROM
-  ranked_items
+  source
 WHERE
-  -- A deduplicação acontece aqui, mantendo apenas o registro mais recente
-  rank_n = 1
+  order_item_id IS NOT NULL

@@ -1,20 +1,55 @@
 config {
-    type: "table",
-    schema: dataform.projectConfig.vars.silver_ecommerce_bq,
-    tags: ["silver", "ecommerce", "products"]
+  type: "table",
+  schema: dataform.projectConfig.vars.silver_ecommerce_bq,
+  name: "slv_ecommerce_products",
+  bigquery: {
+    clusterBy: ["category", "brand"]
+  },
+  tags: ["silver", "ecommerce", "products"],
+  description: "Camada Silver de Produtos: Catálogo limpo, categorização de margem e normalização de texto."
 }
 
+/*
+===================================================================
+Camada Silver - Products
+Objetivo: Padronização de texto e categorização de negócio.
+Estratégia: Full Load (Dimensão)
+===================================================================
+*/
+
 SELECT
-  id AS product_id,
-  cost,
-  retail_price,
-  UPPER(category) AS category,
-  name AS product_name,
-  brand,
-  department,
-  SAFE_DIVIDE((retail_price - cost), cost) * 100 AS margem_percentual
+  product_id,
+  sku,
+  
+  -- Normalização de Texto (Title Case ou Upper Case para facilitar busca)
+  INITCAP(product_name) AS product_name,
+  UPPER(product_category) AS category,
+  INITCAP(product_brand) AS brand,
+  UPPER(product_department) AS department,
+  distribution_center_id,
+
+  -- Valores Financeiros
+  product_cost AS cost,
+  product_retail_price AS retail_price,
+  gross_margin,
+  margin_percentage,
+
+  -- Categorização de Margem (Regra de Negócio)
+  CASE
+    WHEN margin_percentage < 20 THEN 'Baixa Margem'
+    WHEN margin_percentage BETWEEN 20 AND 50 THEN 'Média Margem'
+    WHEN margin_percentage > 50 THEN 'Alta Margem'
+    ELSE 'Indefinido'
+  END AS margin_category,
+
+  -- Flags de Qualidade (Herdados da Bronze, úteis para filtro na Gold)
+  has_invalid_cost,
+  has_suspicious_margin,
+
+  -- Metadados
+  CURRENT_TIMESTAMP() AS data_processamento_silver
+
 FROM
   ${ref("brz_ecommerce_products")}
 WHERE
-  cost IS NOT NULL
-  AND cost > 0
+  product_id IS NOT NULL

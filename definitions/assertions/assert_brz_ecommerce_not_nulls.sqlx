@@ -1,0 +1,193 @@
+config {
+  type: "assertion",
+  name: "assert_brz_ecommerce_not_nulls",
+  tags: ["assertion", "ecommerce", "bronze", "data_quality", "nulls", "critical"],
+  description: "Valida que campos críticos (PKs, FKs e campos obrigatórios) não possuem valores nulos em todas as tabelas ecommerce."
+}
+
+/*
+===================================================================
+Assertion: Critical Field Null Validation
+Objetivo: Garantir que campos essenciais não são nulos
+===================================================================
+*/
+
+WITH orders_nulls AS (
+  SELECT
+    'brz_ecommerce_orders' AS table_name,
+    CASE
+      WHEN order_id IS NULL THEN 'PK_NULL: order_id ausente'
+      WHEN user_id IS NULL THEN 'FK_NULL: user_id ausente (órfão)'
+      WHEN order_created_at IS NULL THEN 'REQUIRED_NULL: order_created_at ausente'
+      WHEN order_status IS NULL THEN 'REQUIRED_NULL: order_status ausente'
+      ELSE 'ok'
+    END AS null_type,
+    order_created_at,
+    order_status
+  FROM ${ref("brz_ecommerce_orders")}
+  WHERE 
+    order_id IS NULL
+    OR user_id IS NULL
+    OR order_created_at IS NULL
+    OR order_status IS NULL
+),
+
+orders_summary AS (
+  SELECT
+    table_name,
+    null_type,
+    COUNT(*) AS null_count,
+    MIN(order_created_at) AS earliest_record,
+    MAX(order_created_at) AS latest_record,
+    TO_JSON_STRING(ARRAY_AGG(DISTINCT order_status IGNORE NULLS LIMIT 5)) AS sample_context
+  FROM orders_nulls
+  GROUP BY table_name, null_type
+),
+
+order_items_nulls AS (
+  SELECT
+    'brz_ecommerce_order_items' AS table_name,
+    CASE
+      WHEN order_item_id IS NULL THEN 'PK_NULL: order_item_id ausente'
+      WHEN order_id IS NULL THEN 'FK_NULL: order_id ausente (órfão)'
+      WHEN user_id IS NULL THEN 'FK_NULL: user_id ausente (órfão)'
+      WHEN product_id IS NULL THEN 'FK_NULL: product_id ausente (órfão)'
+      WHEN order_item_created_at IS NULL THEN 'REQUIRED_NULL: order_item_created_at ausente'
+      WHEN order_item_sale_price IS NULL THEN 'REQUIRED_NULL: order_item_sale_price ausente'
+      ELSE 'ok'
+    END AS null_type,
+    order_item_created_at,
+    order_id
+  FROM ${ref("brz_ecommerce_order_items")}
+  WHERE 
+    order_item_id IS NULL
+    OR order_id IS NULL
+    OR user_id IS NULL
+    OR product_id IS NULL
+    OR order_item_created_at IS NULL
+    OR order_item_sale_price IS NULL
+),
+
+order_items_summary AS (
+  SELECT
+    table_name,
+    null_type,
+    COUNT(*) AS null_count,
+    MIN(order_item_created_at) AS earliest_record,
+    MAX(order_item_created_at) AS latest_record,
+    TO_JSON_STRING(ARRAY_AGG(DISTINCT CAST(order_id AS STRING) IGNORE NULLS LIMIT 5)) AS sample_context
+  FROM order_items_nulls
+  GROUP BY table_name, null_type
+),
+
+users_nulls AS (
+  SELECT
+    'brz_ecommerce_users' AS table_name,
+    CASE
+      WHEN user_id IS NULL THEN 'PK_NULL: user_id ausente'
+      WHEN user_email IS NULL THEN 'REQUIRED_NULL: user_email ausente (PII crítico)'
+      WHEN user_created_at IS NULL THEN 'REQUIRED_NULL: user_created_at ausente'
+      WHEN user_country IS NULL THEN 'REQUIRED_NULL: user_country ausente'
+      ELSE 'ok'
+    END AS null_type,
+    user_created_at,
+    user_country
+  FROM ${ref("brz_ecommerce_users")}
+  WHERE 
+    user_id IS NULL
+    OR user_email IS NULL
+    OR user_created_at IS NULL
+    OR user_country IS NULL
+),
+
+users_summary AS (
+  SELECT
+    table_name,
+    null_type,
+    COUNT(*) AS null_count,
+    MIN(user_created_at) AS earliest_record,
+    MAX(user_created_at) AS latest_record,
+    TO_JSON_STRING(ARRAY_AGG(DISTINCT user_country IGNORE NULLS LIMIT 5)) AS sample_context
+  FROM users_nulls
+  GROUP BY table_name, null_type
+),
+
+products_nulls AS (
+  SELECT
+    'brz_ecommerce_products' AS table_name,
+    CASE
+      WHEN product_id IS NULL THEN 'PK_NULL: product_id ausente'
+      WHEN sku IS NULL THEN 'REQUIRED_NULL: sku ausente'
+      WHEN product_name IS NULL THEN 'REQUIRED_NULL: product_name ausente'
+      WHEN product_cost IS NULL THEN 'REQUIRED_NULL: product_cost ausente'
+      WHEN product_retail_price IS NULL THEN 'REQUIRED_NULL: product_retail_price ausente'
+      WHEN product_category IS NULL THEN 'REQUIRED_NULL: product_category ausente'
+      ELSE 'ok'
+    END AS null_type,
+    product_category
+  FROM ${ref("brz_ecommerce_products")}
+  WHERE 
+    product_id IS NULL
+    OR sku IS NULL
+    OR product_name IS NULL
+    OR product_cost IS NULL
+    OR product_retail_price IS NULL
+    OR product_category IS NULL
+),
+
+products_summary AS (
+  SELECT
+    table_name,
+    null_type,
+    COUNT(*) AS null_count,
+    CAST(NULL AS TIMESTAMP) AS earliest_record,
+    CAST(NULL AS TIMESTAMP) AS latest_record,
+    TO_JSON_STRING(ARRAY_AGG(DISTINCT product_category IGNORE NULLS LIMIT 5)) AS sample_context
+  FROM products_nulls
+  GROUP BY table_name, null_type
+)
+
+-- União de todos os resumos
+SELECT 
+  table_name,
+  null_type,
+  null_count,
+  earliest_record,
+  latest_record,
+  sample_context
+FROM orders_summary
+
+UNION ALL
+
+SELECT 
+  table_name,
+  null_type,
+  null_count,
+  earliest_record,
+  latest_record,
+  sample_context
+FROM order_items_summary
+
+UNION ALL
+
+SELECT 
+  table_name,
+  null_type,
+  null_count,
+  earliest_record,
+  latest_record,
+  sample_context
+FROM users_summary
+
+UNION ALL
+
+SELECT 
+  table_name,
+  null_type,
+  null_count,
+  earliest_record,
+  latest_record,
+  sample_context
+FROM products_summary
+
+ORDER BY null_count DESC, table_name, null_type

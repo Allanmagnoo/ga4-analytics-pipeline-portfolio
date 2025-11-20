@@ -1,11 +1,90 @@
 config {
-    type: "table",
+    type: "incremental",
     schema: dataform.projectConfig.vars.bronze_ecommerce_bq,
-    tags: ["bronze", "ecommerce", "orders"]
+    name: "brz_ecommerce_orders",
+    uniqueKey: ["order_id"],
+    bigquery: {
+        partitionBy: "DATE(order_created_at)",
+        clusterBy: ["order_status", "user_id"]
+    },
+    tags: ["bronze", "ecommerce", "orders"],
+    description: "Tabela incremental de pedidos da camada Bronze - Dados brutos do thelook_ecommerce"
 }
 
+/*
+===================================================================
+Camada Bronze - Orders (thelook_ecommerce)
+Estratégia: Carga incremental com deduplicação robusta
+===================================================================
+*/
+
 SELECT
-  *,
+  -- ========================================
+  -- IDENTIFICADORES
+  -- ========================================
+  order_id,
+  user_id,
+  
+  -- ========================================
+  -- STATUS E CLASSIFICAÇÃO
+  -- ========================================
+  status AS order_status,
+  gender AS user_gender,
+  
+  -- ========================================
+  -- TIMESTAMPS (Ciclo de Vida do Pedido)
+  -- ========================================
+  created_at AS order_created_at,
+  returned_at AS order_returned_at,
+  shipped_at AS order_shipped_at,
+  delivered_at AS order_delivered_at,
+  
+  -- ========================================
+  -- MÉTRICAS
+  -- ========================================
+  num_of_item AS order_num_of_item,
+  
+  -- ========================================
+  -- FLAGS DE QUALIDADE
+  -- ========================================
+  CASE 
+    WHEN status = 'Cancelled' THEN TRUE 
+    ELSE FALSE 
+  END AS is_cancelled,
+  
+  CASE 
+    WHEN returned_at IS NOT NULL THEN TRUE 
+    ELSE FALSE 
+  END AS is_returned,
+  
+  CASE 
+    WHEN delivered_at IS NOT NULL THEN TRUE 
+    ELSE FALSE 
+  END AS is_delivered,
+  
+  -- ========================================
+  -- METADADOS DE AUDITORIA
+  -- ========================================
   CURRENT_TIMESTAMP() AS data_ingestao
-FROM
-  ${ref("orders")}
+
+FROM (
+  SELECT
+    *,
+    ROW_NUMBER() OVER (
+      PARTITION BY order_id 
+      ORDER BY created_at DESC
+    ) AS dedup_row_num
+  FROM
+    ${ref("orders")}
+  ${when(incremental(),
+    `WHERE created_at >= (
+      SELECT 
+        DATE_SUB(
+          COALESCE(MAX(order_created_at), CURRENT_TIMESTAMP()),
+          INTERVAL CAST(${dataform.projectConfig.vars.incremental_window_days} AS INT64) DAY
+        )
+      FROM ${self()}
+    )`
+  )}
+)
+WHERE dedup_row_num = 1

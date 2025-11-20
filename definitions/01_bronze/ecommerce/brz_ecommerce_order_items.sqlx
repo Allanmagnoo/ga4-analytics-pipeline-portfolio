@@ -1,11 +1,104 @@
 config {
-    type: "table",
+    type: "incremental",
     schema: dataform.projectConfig.vars.bronze_ecommerce_bq,
-    tags: ["bronze", "ecommerce", "order_items"]
+    name: "brz_ecommerce_order_items",
+    uniqueKey: ["order_item_id"],
+    bigquery: {
+        partitionBy: "DATE(order_item_created_at)",
+        clusterBy: ["order_item_status", "product_id", "order_id"]
+    },
+    tags: ["bronze", "ecommerce", "order_items"],
+    description: "Tabela incremental de itens de pedidos da camada Bronze - Dados brutos do thelook_ecommerce"
 }
 
+/*
+===================================================================
+Camada Bronze - Order Items (thelook_ecommerce)
+Estratégia: Carga incremental com deduplicação e validações
+===================================================================
+*/
+
 SELECT
-  *,
+  -- ========================================
+  -- IDENTIFICADORES
+  -- ========================================
+  id AS order_item_id,
+  order_id,
+  user_id,
+  product_id,
+  inventory_item_id,
+  
+  -- ========================================
+  -- STATUS E CLASSIFICAÇÃO
+  -- ========================================
+  -- ========================================
+  -- STATUS E CLASSIFICAÇÃO
+  -- ========================================
+  status AS order_item_status,
+  
+  -- ========================================
+  -- TIMESTAMPS (Ciclo de Vida do Item)
+  -- ========================================
+  created_at AS order_item_created_at,
+  shipped_at AS order_item_shipped_at,
+  delivered_at AS order_item_delivered_at,
+  returned_at AS order_item_returned_at,
+  
+  -- ========================================
+  -- MÉTRICAS FINANCEIRAS
+  -- ========================================
+  sale_price AS order_item_sale_price,
+  
+  -- ========================================
+  -- FLAGS DE QUALIDADE
+  -- ========================================
+  CASE 
+    WHEN status = 'Cancelled' THEN TRUE 
+    ELSE FALSE 
+  END AS is_cancelled,
+  
+  CASE 
+    WHEN returned_at IS NOT NULL THEN TRUE 
+    ELSE FALSE 
+  END AS is_returned,
+  
+  CASE 
+    WHEN delivered_at IS NOT NULL THEN TRUE 
+    ELSE FALSE 
+  END AS is_delivered,
+  
+  CASE 
+    WHEN sale_price IS NULL OR sale_price <= 0 THEN TRUE 
+    ELSE FALSE 
+  END AS has_invalid_price,
+  
+  -- ========================================
+  -- METADADOS DE AUDITORIA
+  -- ========================================
   CURRENT_TIMESTAMP() AS data_ingestao
-FROM
-  ${ref("order_items")}
+
+FROM (
+  SELECT
+    *,
+    ROW_NUMBER() OVER (
+      PARTITION BY id 
+      ORDER BY created_at DESC
+    ) AS dedup_row_num
+  FROM
+    ${ref("order_items")}
+ 
+    -- Filtro incremental: apenas últimos N dias
+    /*
+    ${when(incremental(),
+      ` WHERE created_at >= (
+        SELECT 
+          DATE_SUB(
+            COALESCE(MAX(order_item_created_at), CURRENT_TIMESTAMP()),
+            INTERVAL CAST(${dataform.projectConfig.vars.incremental_window_days} AS INT64) DAY
+          )
+        FROM ${self()}
+      )`
+    )}
+    */
+)
+WHERE dedup_row_num = 1

@@ -8,8 +8,8 @@ dataformCoreVersion: 3.0.26
 # --- VARIÁVEIS DO PROJETO ---
 # A seção de variáveis começa aqui
 vars:
-
     # Fontes de Dados do Teste (Ecommerce)
+  dev_work: dev_work
   bronze_ecommerce_bq: "brz_ecommerce"
   silver_ecommerce_bq: "slv_ecommerce"
   gold_ecommerce_bq: "gld_ecommerce"

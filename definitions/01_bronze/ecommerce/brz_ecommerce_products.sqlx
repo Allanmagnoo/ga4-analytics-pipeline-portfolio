@@ -1,11 +1,88 @@
 config {
     type: "table",
     schema: dataform.projectConfig.vars.bronze_ecommerce_bq,
-    tags: ["bronze", "ecommerce", "products"]
+    name: "brz_ecommerce_products",
+    bigquery: {
+        clusterBy: ["product_category", "product_department", "product_brand"]
+    },
+    tags: ["bronze", "ecommerce", "products", "dimension"],
+    description: "Tabela de dimensão de produtos da camada Bronze - Dados brutos do thelook_ecommerce (Full Load)"
 }
 
+/*
+===================================================================
+Camada Bronze - Products (thelook_ecommerce)
+Estratégia: Full load (tabela de dimensão, pequeno volume)
+===================================================================
+*/
+
 SELECT
-  *,
+  -- ========================================
+  -- IDENTIFICADORES
+  -- ========================================
+  id AS product_id,
+  sku,
+  
+  -- ========================================
+  -- ATRIBUTOS DO PRODUTO
+  -- ========================================
+
+  name AS product_name,
+  category AS product_category,
+  brand AS product_brand,
+  department AS product_department,
+  distribution_center_id,
+  
+  -- ========================================
+  -- MÉTRICAS FINANCEIRAS
+  -- ========================================
+  cost AS product_cost,
+  retail_price AS product_retail_price,
+  
+  -- ========================================
+  -- MÉTRICAS CALCULADAS
+  -- ========================================
+  retail_price - cost AS gross_margin,
+  
+  SAFE_DIVIDE(retail_price - cost, cost) * 100 AS margin_percentage,
+  
+  -- ========================================
+  -- FLAGS DE QUALIDADE
+  -- ========================================
+  CASE 
+    WHEN cost IS NULL OR cost <= 0 THEN TRUE 
+    ELSE FALSE 
+  END AS has_invalid_cost,
+  
+  CASE 
+    WHEN retail_price IS NULL OR retail_price <= 0 THEN TRUE 
+    ELSE FALSE 
+  END AS has_invalid_price,
+  
+  CASE 
+    WHEN cost > retail_price THEN TRUE 
+    ELSE FALSE 
+  END AS has_negative_margin,
+  
+  -- Detecta margens irreais (possivelmente erro de dados)
+  CASE 
+    WHEN SAFE_DIVIDE(retail_price - cost, cost) > 10 THEN TRUE 
+    ELSE FALSE 
+  END AS has_suspicious_margin,
+  
+  -- ========================================
+  -- METADADOS DE AUDITORIA
+  -- ========================================
   CURRENT_TIMESTAMP() AS data_ingestao
-FROM
-  ${ref("products")}
+
+FROM (
+  SELECT
+    *,
+    ROW_NUMBER() OVER (
+      PARTITION BY id 
+      ORDER BY id
+    ) AS dedup_row_num
+  FROM
+    ${ref("products")}
+)
+WHERE dedup_row_num = 1

@@ -1,41 +1,72 @@
 config {
-  type: "table",
+  type: "incremental",
   schema: dataform.projectConfig.vars.silver_ecommerce_bq,
-  tags: ["silver", "ecommerce", "users"]
+  name: "slv_ecommerce_users",
+  uniqueKey: ["user_id"],
+  bigquery: {
+    partitionBy: "DATE(created_at)",
+    clusterBy: ["country", "traffic_source"]
+  },
+  tags: ["silver", "ecommerce", "users"],
+  description: "Camada Silver de Usuários: Dados demográficos limpos e segmentação."
 }
 
+/*
+===================================================================
+Camada Silver - Users
+Objetivo: Limpeza de dados demográficos e geográficos.
+===================================================================
+*/
+
+WITH source AS (
+  SELECT
+    *
+  FROM
+    ${ref("brz_ecommerce_users")}
+  ${when(incremental(),
+    `WHERE user_created_at >= (
+      SELECT 
+        DATE_SUB(
+          COALESCE(MAX(user_created_at), CURRENT_TIMESTAMP()),
+          INTERVAL CAST(${dataform.projectConfig.vars.incremental_window_days} AS INT64) DAY
+        )
+      FROM ${self()}
+    )`
+  )}
+)
+
 SELECT
-  id AS user_id,
-  first_name,
-  last_name,
-  email,
-  -- Coluna original, mantida para referência e auditoria
-  age AS idade_no_cadastro,
+  user_id,
   
-  -- Decisão Técnica: Implementação da Idade Dinâmica Estimada.
-  -- Passo 1: Estimar a data de nascimento subtraindo a 'age' da data de criação do usuário.
-  -- Ex: Se created_at é '2024-10-29' e age é 30, a data de nascimento estimada é '1994-10-29'.
-  DATE_SUB(CAST(created_at AS DATE), INTERVAL age YEAR) AS data_nascimento_estimada,
+  -- PII
+  user_full_name AS full_name,
+  user_email AS email,
+  
+  -- Demografia
+  user_age AS age,
+  age_group,
+  UPPER(user_gender) AS gender,
+  
+  -- Localização Padronizada
+  UPPER(user_country) AS country,
+  INITCAP(user_city) AS city,
+  UPPER(user_state) AS state,
+  user_postal_code AS postal_code,
+  user_latitude AS latitude,
+  user_longitude AS longitude,
+  
+  -- Origem
+  user_traffic_source AS traffic_source,
+  user_created_at AS created_at,
 
-  -- Passo 2: Calcular a idade atual dinamicamente a partir da data de nascimento estimada.
-  -- Esta coluna será sempre precisa (com a margem de erro de ~1 ano da estimativa).
-  DATE_DIFF(CURRENT_DATE(), DATE_SUB(CAST(created_at AS DATE), INTERVAL age YEAR), YEAR) AS idade_atual_estimada,
+  -- Flags de Qualidade
+  has_invalid_email,
+  has_invalid_age,
 
-  -- Padroniza o país para maiúsculas, garantindo consistência
-  UPPER(country) AS country,
-  city,
-  state,
-  postal_code,
-  created_at
+  -- Metadados
+  CURRENT_TIMESTAMP() AS data_processamento_silver
+
 FROM
-  ${ref("brz_ecommerce_users")}
+  source
 WHERE
-  -- Aplica a regra de negócio para garantir a validade do e-mail.
-  email IS NOT NULL
-  AND email LIKE '%@%'
-  -- Adiciona um filtro de sanidade para o cálculo de idade
-  AND age > 0 
-  AND created_at IS NOT NULL
-
-
-  
+  user_id IS NOT NULL

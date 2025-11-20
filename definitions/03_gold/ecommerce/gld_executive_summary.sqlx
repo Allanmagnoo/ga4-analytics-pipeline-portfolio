@@ -1,0 +1,133 @@
+config {
+  type: "view",
+  schema: dataform.projectConfig.vars.gold_ecommerce_bq,
+  name: "gld_executive_summary",
+  tags: ["gold", "ecommerce", "analytics", "summary", "executive"],
+  description: "Visão executiva consolidada com principais KPIs e métricas de negócio para dashboards C-level."
+}
+
+/*
+===================================================================
+Gold Layer - Executive Summary
+Objetivo: Snapshot de alto nível para executivos
+===================================================================
+*/
+
+WITH current_period AS (
+  SELECT
+    -- Period definition (últimos 30 dias)
+    DATE_SUB(CURRENT_DATE(), INTERVAL 30 DAY) AS period_start,
+    CURRENT_DATE() AS period_end
+),
+
+previous_period AS (
+  SELECT
+    DATE_SUB(CURRENT_DATE(), INTERVAL 60 DAY) AS period_start,
+    DATE_SUB(CURRENT_DATE(), INTERVAL 30 DAY) AS period_end
+),
+
+-- Current period metrics
+current_metrics AS (
+  SELECT
+    COUNT(DISTINCT o.order_id) AS orders,
+    COUNT(DISTINCT o.user_id) AS active_customers,
+    SUM(oi.sale_price) AS revenue,
+    COUNT(DISTINCT oi.product_id) AS products_sold,
+    AVG(o.days_to_complete) AS avg_fulfillment_days,
+    SUM(CASE WHEN o.is_cancelled THEN 1 ELSE 0 END) / COUNT(*) * 100 AS cancellation_rate
+  FROM ${ref("slv_ecommerce_orders")} o
+  INNER JOIN ${ref("slv_ecommerce_order_items")} oi ON o.order_id = oi.order_id
+  CROSS JOIN current_period cp
+  WHERE DATE(o.created_at) BETWEEN cp.period_start AND cp.period_end
+),
+
+-- Previous period metrics
+previous_metrics AS (
+  SELECT
+    COUNT(DISTINCT o.order_id) AS orders,
+    COUNT(DISTINCT o.user_id) AS active_customers,
+    SUM(oi.sale_price) AS revenue,
+    COUNT(DISTINCT oi.product_id) AS products_sold
+  FROM ${ref("slv_ecommerce_orders")} o
+  INNER JOIN ${ref("slv_ecommerce_order_items")} oi ON o.order_id = oi.order_id
+  CROSS JOIN previous_period pp
+  WHERE DATE(o.created_at) BETWEEN pp.period_start AND pp.period_end
+),
+
+-- Customer base metrics
+customer_metrics AS (
+  SELECT
+    COUNT(DISTINCT user_id) AS total_customers,
+    COUNT(DISTINCT CASE WHEN customer_segment = 'Champions' THEN user_id END) AS champion_customers,
+    COUNT(DISTINCT CASE WHEN customer_segment = 'At Risk' THEN user_id END) AS at_risk_customers,
+    AVG(total_revenue) AS avg_customer_ltv
+  FROM ${ref("gld_customer_lifetime_value")}
+),
+
+-- Product metrics
+product_metrics AS (
+  SELECT
+    COUNT(DISTINCT product_id) AS total_products,
+    COUNT(DISTINCT CASE WHEN performance_tier = 'Star' THEN product_id END) AS star_products,
+    COUNT(DISTINCT CASE WHEN performance_tier = 'Slow Moving' THEN product_id END) AS slow_moving_products,
+    AVG(margin_percentage) AS avg_product_margin
+  FROM ${ref("gld_product_performance")}
+)
+
+SELECT
+  -- Current period snapshot
+  'Last 30 Days' AS period,
+  CURRENT_DATE() AS report_date,
+  
+  -- Revenue & Growth
+  cm.revenue AS current_revenue,
+  pm.revenue AS previous_revenue,
+  SAFE_DIVIDE(cm.revenue - pm.revenue, pm.revenue) * 100 AS revenue_growth_pct,
+  
+  -- Orders & Growth
+  cm.orders AS current_orders,
+  pm.orders AS previous_orders,
+  SAFE_DIVIDE(cm.orders - pm.orders, pm.orders) * 100 AS orders_growth_pct,
+  SAFE_DIVIDE(cm.revenue, cm.orders) AS avg_order_value,
+  
+  -- Customer metrics
+  cm.active_customers AS current_active_customers,
+  pm.active_customers AS previous_active_customers,
+  custm.total_customers AS total_customer_base,
+  custm.champion_customers,
+  custm.at_risk_customers,
+  custm.avg_customer_ltv,
+  
+  -- Product metrics
+  cm.products_sold AS products_sold_current_period,
+  prodm.total_products AS total_product_catalog,
+  prodm.star_products,
+  prodm.slow_moving_products,
+  prodm.avg_product_margin,
+  
+  -- Operational metrics
+  cm.avg_fulfillment_days,
+  cm.cancellation_rate,
+  
+  -- Health scores (0-100)
+  CASE 
+    WHEN SAFE_DIVIDE(cm.revenue - pm.revenue, pm.revenue) * 100 > 10 THEN 100
+    WHEN SAFE_DIVIDE(cm.revenue - pm.revenue, pm.revenue) * 100 > 0 THEN 75
+    WHEN SAFE_DIVIDE(cm.revenue - pm.revenue, pm.revenue) * 100 > -10 THEN 50
+    ELSE 25
+  END AS revenue_health_score,
+  
+  CASE 
+    WHEN cm.avg_fulfillment_days < 3 THEN 100
+    WHEN cm.avg_fulfillment_days < 5 THEN 75
+    WHEN cm.avg_fulfillment_days < 7 THEN 50
+    ELSE 25
+  END AS operations_health_score,
+  
+  -- Metadados
+  CURRENT_TIMESTAMP() AS data_processamento_gold
+
+FROM current_metrics cm
+CROSS JOIN previous_metrics pm
+CROSS JOIN customer_metrics custm
+CROSS JOIN product_metrics prodm
