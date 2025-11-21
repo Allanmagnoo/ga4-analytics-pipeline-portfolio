@@ -490,7 +490,7 @@ FROM `datascience-473223.gld_ecommerce.gld_executive_summary`;
 
 1. **Clonar o repositório:**
    ```bash
-   git clone https://github.com/yourusername/ga4-analytics-pipeline-portfolio.git
+   git clone https://github.com/Allanmagnoo/data-marketing-pipeline-portfolio.git
    ```
 
 2. **Configurar workspace Dataform:**
@@ -604,29 +604,19 @@ FROM ${ref("slv_ecommerce_orders")}
 select order_id, status, revenue/orders as aov from orders
 ```
 
----
 
-## 📄 Licença
-
-Este projeto está licenciado sob a MIT License - veja o arquivo [LICENSE](LICENSE) para detalhes.
 
 ---
 
 ## 👤 Autor
 
-**Seu Nome**
-- LinkedIn: [seu-perfil](https://linkedin.com/in/seu-perfil)
-- Portfólio: [seu-website.com](https://seuwebsite.com)
-- Email: seu.email@exemplo.com
+**Allan Magno**
 
----
+- Email: allabortolosso@gmail.com
 
-## 🙏 Agradecimentos
-
-- **Fonte de Dados:** Google BigQuery public dataset `thelook_ecommerce`
-- **Padrão de Arquitetura:** Databricks Medallion Architecture
-- **Inspiração:** Melhores práticas modernas de engenharia de dados das comunidades dbt, Airflow e Dataform
 
 ---
 
 **⭐ Se este projeto te ajudou a aprender algo novo, considere dar uma estrela!**
+
+
