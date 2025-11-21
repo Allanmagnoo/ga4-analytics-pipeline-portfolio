@@ -124,6 +124,36 @@ WHEN age < 13 THEN 'DEMOGRAPHIC_COMPLIANCE: COPPA violation'
 
 ---
 
+## 🔒 LGPD & Data Governance
+
+To ensure compliance with **LGPD (Lei Geral de Proteção de Dados)**, this project implements **Column-Level Security** using BigQuery Policy Tags.
+
+### PII Protection Strategy
+
+- **Identification**: Personally Identifiable Information (PII) columns are explicitly tagged in the Dataform definitions.
+- **Classification**: A specific Taxonomy (`LGPD_Governance_Taxonomy`) and Policy Tag (`PII_High_Sensitivity`) were created in Google Cloud Data Catalog.
+- **Enforcement**: Access to these columns is restricted via IAM roles. Only authorized principals (Fine-Grained Reader) can decrypt/view the data.
+
+### Protected Columns
+
+| Table | Column | Tag Applied |
+|-------|--------|-------------|
+| `brz_ecommerce_users` | `user_email`, `user_full_name`, `user_street_address`, `user_postal_code`, `user_latitude`, `user_longitude` | 🔴 PII_High_Sensitivity |
+| `slv_ecommerce_users` | `email`, `full_name`, `postal_code`, `latitude`, `longitude` | 🔴 PII_High_Sensitivity |
+
+**Implementation Details:**
+```javascript
+// Example from slv_ecommerce_users.sqlx
+columns: {
+  email: {
+    description: "E-mail do usuário (PII)",
+    bigqueryPolicyTags: [dataform.projectConfig.vars.pii_policy_tag]
+  }
+}
+```
+
+---
+
 ## 🚀 Advanced Analytics Implemented
 
 ### 1. Customer Lifetime Value (CLV)
