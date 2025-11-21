@@ -604,11 +604,7 @@ FROM ${ref("slv_ecommerce_orders")}
 select order_id, status, revenue/orders as aov from orders
 ```
 
----
 
-## 📄 Licença
-
-Este projeto está licenciado sob a MIT License - veja o arquivo [LICENSE](LICENSE) para detalhes.
 
 ---
 
@@ -622,4 +618,5 @@ Este projeto está licenciado sob a MIT License - veja o arquivo [LICENSE](LICEN
 ---
 
 **⭐ Se este projeto te ajudou a aprender algo novo, considere dar uma estrela!**
+
 
