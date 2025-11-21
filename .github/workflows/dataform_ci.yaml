@@ -1,0 +1,35 @@
+name: Dataform CI/CD
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  dataform-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install Dataform CLI
+        run: npm install -g @dataform/cli
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Dataform Compile
+        run: dataform compile
+
+      - name: Dataform Dry Run
+        if: github.event_name == 'pull_request'
+        run: dataform run --dry-run
+        env:
+          # Requires a Service Account Key in GitHub Secrets for BigQuery access
+          # If not available, this step can be skipped or mocked
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GCP_SA_KEY }}

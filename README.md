@@ -570,6 +570,44 @@ Bronze (4 tables) → Silver (4 tables) → Gold Tier 1 (5 tables) → Gold Tier
 
 ---
 
+## 💻 Development Setup (CI/CD & Quality)
+
+Para garantir a qualidade do código em nível Enterprise, este projeto utiliza ferramentas de automação:
+
+### 1. Linting (SQLFluff)
+Mantemos um padrão rigoroso de SQL (Google Style Guide) usando SQLFluff.
+```bash
+# Instalar dependências
+pip install sqlfluff
+
+# Rodar linter
+sqlfluff lint definitions/
+```
+
+### 2. Pre-commit Hooks
+Automação local para impedir commits com erros.
+```bash
+# Instalar pre-commit
+pip install pre-commit
+pre-commit install
+```
+
+### 3. CI/CD (GitHub Actions)
+Todo Pull Request passa por validação automática:
+- **Compile**: Verifica erros de compilação do Dataform.
+- **Lint**: Verifica estilo de código.
+- **Dry Run**: Simula execução no BigQuery (requer credenciais).
+
+#### 🔑 Configuração do Segredo (Obrigatório para CI/CD)
+Para que o "Dry Run" funcione no GitHub, você precisa configurar a credencial:
+1. No Google Cloud Console, vá em **IAM & Admin** > **Service Accounts**.
+2. Crie uma chave JSON para sua Service Account do Dataform.
+3. Copie o conteúdo do JSON.
+4. No seu repositório GitHub, vá em **Settings** > **Secrets and variables** > **Actions**.
+5. Crie um **New repository secret** com o nome `GCP_SA_KEY` e cole o JSON.
+
+---
+
 ## 🤝 Contribuindo
 
 Este é um projeto de portfólio, mas feedback é bem-vindo! Se você encontrar problemas ou tiver sugestões:

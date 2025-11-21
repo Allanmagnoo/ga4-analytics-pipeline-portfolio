@@ -7,7 +7,16 @@ config {
     clusterBy: ["customer_segment", "country"]
   },
   tags: ["gold", "ecommerce", "analytics", "clv"],
-  description: "Análise de Customer Lifetime Value (CLV) com segmentação de clientes e métricas de retenção."
+  description: "Análise de Customer Lifetime Value (CLV) com segmentação de clientes e métricas de retenção.",
+  columns: {
+    user_id: "Identificador único do usuário",
+    country: "País do usuário (Normalizado)",
+    customer_segment: "Segmentação RFM (Champions, Loyal, etc)",
+    total_revenue: "Receita total gerada pelo cliente (Lifetime)",
+    estimated_annual_clv: "Projeção de valor anual do cliente baseada no histórico",
+    recency_days: "Dias desde a última compra",
+    frequency_segment: "Classificação baseada em volume de pedidos"
+  }
 }
 
 /*

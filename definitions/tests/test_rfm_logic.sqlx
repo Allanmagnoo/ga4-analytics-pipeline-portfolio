@@ -1,0 +1,33 @@
+test {
+  name: "test_rfm_logic",
+  dataset: "gld_customer_lifetime_value",
+  input: {
+    slv_ecommerce_orders: "
+      SELECT 1 as order_id, 101 as user_id, TIMESTAMP('2023-01-01') as created_at, false as is_cancelled, false as is_returned UNION ALL
+      SELECT 2 as order_id, 101 as user_id, TIMESTAMP('2023-01-15') as created_at, false as is_cancelled, false as is_returned UNION ALL
+      SELECT 3 as order_id, 102 as user_id, TIMESTAMP('2023-01-01') as created_at, false as is_cancelled, false as is_returned
+    ",
+    slv_ecommerce_order_items: "
+      SELECT 1 as order_id, 100 as sale_price UNION ALL
+      SELECT 2 as order_id, 500 as sale_price UNION ALL
+      SELECT 3 as order_id, 50 as sale_price
+    ",
+    slv_ecommerce_users: "
+      SELECT 101 as user_id, 'Brasil' as country, 'Organic' as traffic_source, TIMESTAMP('2023-01-01') as created_at UNION ALL
+      SELECT 102 as user_id, 'USA' as country, 'Paid' as traffic_source, TIMESTAMP('2023-01-01') as created_at
+    "
+  },
+  expect: "
+    SELECT 
+      101 as user_id, 
+      'Brasil' as country, 
+      'Regular' as frequency_segment, 
+      'High Value' as monetary_segment 
+    UNION ALL
+    SELECT 
+      102 as user_id, 
+      'USA' as country, 
+      'One-time' as frequency_segment, 
+      'Low Value' as monetary_segment
+  "
+}
