@@ -5,32 +5,32 @@
 [![Dataform](https://img.shields.io/badge/Dataform-4285F4?style=for-the-badge&logo=google&logoColor=white)](https://cloud.google.com/dataform)
 [![SQL](https://img.shields.io/badge/SQL-CC2927?style=for-the-badge&logo=microsoft-sql-server&logoColor=white)](https://en.wikipedia.org/wiki/SQL)
 
-> **Production-Ready Data Warehouse** | Implementing Bronze-Silver-Gold architecture with advanced analytics, data quality monitoring, and business intelligence for e-commerce insights.
+> **Production-Ready Data Warehouse** | Implementando arquitetura Bronze-Silver-Gold com advanced analytics, monitoramento de qualidade de dados e business intelligence para insights de e-commerce.
 
 ---
 
-## 📊 Project Overview
+## 📊 Visão Geral do Projeto
 
-This project demonstrates a **complete end-to-end data engineering solution** implementing a Medallion Architecture (Bronze → Silver → Gold) on Google Cloud Platform. Built for an e-commerce analytics use case, it showcases modern data engineering best practices including:
+Este projeto demonstra uma **solução completa de engenharia de dados end-to-end** implementando uma Medallion Architecture (Bronze → Silver → Gold) no Google Cloud Platform. Construído para um caso de uso de analytics de e-commerce, ele apresenta as melhores práticas modernas de engenharia de dados, incluindo:
 
-- ✅ **Incremental ELT pipelines** with optimized partition/cluster strategies
-- ✅ **Comprehensive data quality framework** with 5+ assertion layers
-- ✅ **Advanced analytics** (Customer Lifetime Value, Cohort Analysis, RFM Segmentation)
-- ✅ **Production-ready SQL** with proper error handling and SAFE functions
-- ✅ **Scalable architecture** handling millions of records efficiently
+- ✅ **Pipelines ELT incrementais** com estratégias otimizadas de partition/cluster
+- ✅ **Framework abrangente de qualidade de dados** com 5+ camadas de assertions
+- ✅ **Advanced Analytics** (Customer Lifetime Value, Cohort Analysis, RFM Segmentation)
+- ✅ **SQL pronto para produção** com tratamento de erros adequado e funções SAFE
+- ✅ **Arquitetura escalável** lidando com milhões de registros de forma eficiente
 
-### 🎯 Business Value Delivered
+### 🎯 Valor de Negócio Entregue
 
-| Metric | Value | Impact |
+| Métrica | Valor | Impacto |
 |--------|-------|--------|
-| **Data Quality Coverage** | 100% | All critical fields validated with assertions |
-| **Query Performance** | 95% faster | Pre-aggregated Gold tables vs. raw data |
-| **Analytics Depth** | 10+ Gold Tables | CLV, Cohort, RFM, Operations KPIs |
-| **Pipeline Efficiency** | Incremental loads | 7-day rolling window for optimal cost |
+| **Cobertura de Qualidade de Dados** | 100% | Todos os campos críticos validados com assertions |
+| **Performance de Query** | 95% mais rápido | Tabelas Gold pré-agregadas vs. dados brutos |
+| **Profundidade Analítica** | 10+ Tabelas Gold | CLV, Cohort, RFM, Operations KPIs |
+| **Eficiência do Pipeline** | Cargas incrementais | Janela móvel de 7 dias para custo ideal |
 
 ---
 
-## 🏛️ Architecture
+## 🏛️ Arquitetura
 
 ### Medallion Layers
 
@@ -43,38 +43,38 @@ This project demonstrates a **complete end-to-end data engineering solution** im
                          ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │  🥉 BRONZE LAYER (brz_ecommerce)                                 │
-│  • Raw data ingestion with metadata                             │
-│  • Incremental loads (7-day window)                              │
-│  • Partitioned by order_created_at                               │
-│  • Source of truth preservation                                  │
+│  • Ingestão de dados brutos com metadados                       │
+│  • Cargas incrementais (janela de 7 dias)                        │
+│  • Particionado por order_created_at                             │
+│  • Preservação da Source of Truth                                │
 │                                                                  │
-│  Tables: brz_ecommerce_orders, brz_ecommerce_order_items,       │
-│          brz_ecommerce_users, brz_ecommerce_products            │
+│  Tabelas: brz_ecommerce_orders, brz_ecommerce_order_items,      │
+│           brz_ecommerce_users, brz_ecommerce_products           │
 └────────────────────────┬────────────────────────────────────────┘
                          │
                          ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │  🥈 SILVER LAYER (slv_ecommerce)                                 │
-│  • Data cleansing & standardization                             │
-│  • Business rule enforcement                                     │
-│  • Calculated fields (hours_to_ship, age_group)                 │
-│  • Null handling & type casting                                  │
+│  • Limpeza e padronização de dados                              │
+│  • Aplicação de regras de negócio                                │
+│  • Campos calculados (hours_to_ship, age_group)                 │
+│  • Tratamento de nulos e type casting                            │
 │                                                                  │
-│  Transformations:                                                │
-│  ├─ UPPER(status) for consistency                               │
-│  ├─ TIMESTAMP_DIFF for cycle time metrics                       │
-│  ├─ SAFE_DIVIDE for margin calculations                         │
-│  └─ Age group standardization                                   │
+│  Transformações:                                                 │
+│  ├─ UPPER(status) para consistência                             │
+│  ├─ TIMESTAMP_DIFF para métricas de tempo de ciclo              │
+│  ├─ SAFE_DIVIDE para cálculos de margem                         │
+│  └─ Padronização de faixa etária                                │
 └────────────────────────┬────────────────────────────────────────┘
                          │
                          ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │  🥇 GOLD LAYER (gld_ecommerce)                                   │
-│  • Business-ready analytics tables                               │
-│  • Pre-aggregated for performance                                │
-│  • Denormalized for BI tools                                     │
+│  • Tabelas analíticas prontas para o negócio                     │
+│  • Pré-agregadas para performance                                │
+│  • Desnormalizadas para ferramentas de BI                        │
 │                                                                  │
-│  Analytics Tables:                                               │
+│  Tabelas Analíticas:                                             │
 │  ├─ gld_customer_lifetime_value (CLV + RFM Segmentation)        │
 │  ├─ gld_product_performance (Merchandising Analytics)           │
 │  ├─ gld_cohort_analysis (Retention Tracking)                    │
@@ -88,62 +88,62 @@ This project demonstrates a **complete end-to-end data engineering solution** im
 
 ---
 
-## 🛡️ Data Quality Framework
+## 🛡️ Framework de Qualidade de Dados
 
-One of the key differentiators of this project is the **comprehensive data quality layer** with automated assertions:
+Um dos principais diferenciais deste projeto é a **camada abrangente de qualidade de dados** com assertions automatizadas:
 
-### Assertion Coverage
+### Cobertura de Assertions
 
-| Assertion | Purpose | Severity | Tables Covered |
+| Assertion | Propósito | Severidade | Tabelas Cobertas |
 |-----------|---------|----------|----------------|
-| `assert_brz_ecommerce_orders_integrity` | PK/FK validation, temporal consistency | 🔴 Critical | orders |
-| `assert_brz_ecommerce_products_quality` | Pricing validation, margin checks | 🔴 Critical | products |
-| `assert_brz_ecommerce_users_validity` | PII validation, COPPA compliance | 🟡 High | users |
-| `assert_brz_ecommerce_no_duplicates` | PK uniqueness across all tables | 🔴 Critical | All 4 tables |
-| `assert_brz_ecommerce_not_nulls` | Required field validation | 🔴 Critical | All 4 tables |
+| `assert_brz_ecommerce_orders_integrity` | Validação de PK/FK, consistência temporal | 🔴 Crítico | orders |
+| `assert_brz_ecommerce_products_quality` | Validação de preços, verificação de margem | 🔴 Crítico | products |
+| `assert_brz_ecommerce_users_validity` | Validação de PII, conformidade COPPA | 🟡 Alto | users |
+| `assert_brz_ecommerce_no_duplicates` | Unicidade de PK em todas as tabelas | 🔴 Crítico | Todas as 4 tabelas |
+| `assert_brz_ecommerce_not_nulls` | Validação de campos obrigatórios | 🔴 Crítico | Todas as 4 tabelas |
 
-### Key Validations
+### Validações Chave
 
-**Business Rule Examples:**
+**Exemplos de Regras de Negócio:**
 ```sql
--- Temporal consistency: Can't ship before creation
+-- Consistência temporal: Não pode enviar antes de criar
 WHEN order_shipped_at < order_created_at THEN 'TEMPORAL_ERROR'
 
--- Pricing integrity: Cost can't exceed retail price
+-- Integridade de preços: Custo não pode exceder preço de varejo
 WHEN product_cost > product_retail_price THEN 'MARGIN_NEGATIVE'
 
--- COPPA compliance: Users under 13 flagged
+-- Conformidade COPPA: Usuários menores de 13 anos sinalizados
 WHEN age < 13 THEN 'DEMOGRAPHIC_COMPLIANCE: COPPA violation'
 ```
 
-**Impact:** These assertions caught **real data quality issues** in the public dataset, including:
-- Products with negative margins (cost > retail price)
-- Missing SKUs/product names
-- Invalid email formats
-- Temporal inconsistencies in order lifecycle
+**Impacto:** Essas assertions capturaram **problemas reais de qualidade de dados** no dataset público, incluindo:
+- Produtos com margens negativas (custo > preço de varejo)
+- SKUs/nomes de produtos ausentes
+- Formatos de e-mail inválidos
+- Inconsistências temporais no ciclo de vida do pedido
 
 ---
 
-## 🔒 LGPD & Data Governance
+## 🔒 LGPD & Governança de Dados
 
-To ensure compliance with **LGPD (Lei Geral de Proteção de Dados)**, this project implements **Column-Level Security** using BigQuery Policy Tags.
+Para garantir conformidade com a **LGPD (Lei Geral de Proteção de Dados)**, este projeto implementa **Column-Level Security** usando BigQuery Policy Tags.
 
-### PII Protection Strategy
+### Estratégia de Proteção de PII
 
-- **Identification**: Personally Identifiable Information (PII) columns are explicitly tagged in the Dataform definitions.
-- **Classification**: A specific Taxonomy (`LGPD_Governance_Taxonomy`) and Policy Tag (`PII_High_Sensitivity`) were created in Google Cloud Data Catalog.
-- **Enforcement**: Access to these columns is restricted via IAM roles. Only authorized principals (Fine-Grained Reader) can decrypt/view the data.
+- **Identificação**: Colunas com PII (Personally Identifiable Information) são explicitamente tageadas nas definições do Dataform.
+- **Classificação**: Uma Taxonomia específica (`LGPD_Governance_Taxonomy`) e Policy Tag (`PII_High_Sensitivity`) foram criadas no Google Cloud Data Catalog.
+- **Aplicação**: O acesso a essas colunas é restrito via IAM roles. Apenas principais autorizados (Fine-Grained Reader) podem descriptografar/visualizar os dados.
 
-### Protected Columns
+### Colunas Protegidas
 
-| Table | Column | Tag Applied |
+| Tabela | Coluna | Tag Aplicada |
 |-------|--------|-------------|
 | `brz_ecommerce_users` | `user_email`, `user_full_name`, `user_street_address`, `user_postal_code`, `user_latitude`, `user_longitude` | 🔴 PII_High_Sensitivity |
 | `slv_ecommerce_users` | `email`, `full_name`, `postal_code`, `latitude`, `longitude` | 🔴 PII_High_Sensitivity |
 
-**Implementation Details:**
+**Detalhes da Implementação:**
 ```javascript
-// Example from slv_ecommerce_users.sqlx
+// Exemplo de slv_ecommerce_users.sqlx
 columns: {
   email: {
     description: "E-mail do usuário (PII)",
@@ -154,63 +154,63 @@ columns: {
 
 ---
 
-## 🚀 Advanced Analytics Implemented
+## 🚀 Advanced Analytics Implementado
 
 ### 1. Customer Lifetime Value (CLV)
-**File:** `gld_customer_lifetime_value.sqlx`
+**Arquivo:** `gld_customer_lifetime_value.sqlx`
 
-**Features:**
-- RFM Segmentation (Recency, Frequency, Monetary)
-- Customer segments: Champions, Loyal, At Risk, Lost
-- Estimated annual CLV calculation
-- Cancellation & return rate tracking
+**Funcionalidades:**
+- Segmentação RFM (Recency, Frequency, Monetary)
+- Segmentos de clientes: Champions, Loyal, At Risk, Lost
+- Cálculo de CLV anual estimado
+- Rastreamento de taxa de cancelamento e devolução
 
-**Business Value:** Identify top 20% customers generating 80% revenue.
+**Valor de Negócio:** Identificar os top 20% clientes que geram 80% da receita.
 
 ---
 
 ### 2. Cohort Analysis
-**File:** `gld_cohort_analysis.sqlx`
+**Arquivo:** `gld_cohort_analysis.sqlx`
 
-**Features:**
-- Monthly acquisition cohorts
-- Retention rate tracking over time
-- Cumulative LTV progression
-- Revenue per cohort analysis
+**Funcionalidades:**
+- Cohorts de aquisição mensal
+- Rastreamento de taxa de retenção ao longo do tempo
+- Progressão de LTV cumulativo
+- Análise de receita por cohort
 
-**Business Value:** Understand customer retention patterns and optimize acquisition channels.
+**Valor de Negócio:** Entender padrões de retenção de clientes e otimizar canais de aquisição.
 
 ---
 
 ### 3. Product Performance Analytics
-**File:** `gld_product_performance.sqlx`
+**Arquivo:** `gld_product_performance.sqlx`
 
-**Features:**
-- Sales velocity (units per day)
-- Category benchmarking (75th percentile)
-- Performance tiers: Star, High Volume, Slow Moving, Dormant
-- Return rate & margin analysis
+**Funcionalidades:**
+- Velocidade de vendas (unidades por dia)
+- Benchmarking de categoria (percentil 75)
+- Tiers de performance: Star, High Volume, Slow Moving, Dormant
+- Análise de taxa de devolução e margem
 
-**Business Value:** Optimize inventory and identify underperforming SKUs.
+**Valor de Negócio:** Otimizar inventário e identificar SKUs com baixo desempenho.
 
 ---
 
 ### 4. Daily Operations KPIs
-**File:** `gld_daily_operations_kpi.sqlx`
+**Arquivo:** `gld_daily_operations_kpi.sqlx`
 
-**Features:**
-- Fulfillment efficiency (median & P95 ship times)
-- 7-day moving averages
-- Week-over-week growth metrics
-- Delayed shipment tracking
+**Funcionalidades:**
+- Eficiência de fulfillment (median & P95 ship times)
+- Médias móveis de 7 dias
+- Métricas de crescimento Week-over-week
+- Rastreamento de envios atrasados
 
-**Business Value:** Monitor operational health and set SLA targets.
+**Valor de Negócio:** Monitorar saúde operacional e definir metas de SLA.
 
 ---
 
-## 🛠️ Technical Implementation Highlights
+## 🛠️ Destaques da Implementação Técnica
 
-### 1. Incremental Loading Strategy
+### 1. Estratégia de Carga Incremental
 ```sql
 ${when(incremental(),
   `WHERE order_created_at >= (
@@ -223,11 +223,11 @@ ${when(incremental(),
 )}
 ```
 
-**Benefit:** Processes only new/updated data, reducing costs by 95%.
+**Benefício:** Processa apenas dados novos/atualizados, reduzindo custos em 95%.
 
 ---
 
-### 2. Partition & Cluster Optimization
+### 2. Otimização de Partition & Cluster
 ```javascript
 bigquery: {
   partitionBy: "DATE(created_at)",
@@ -235,11 +235,11 @@ bigquery: {
 }
 ```
 
-**Benefit:** Queries scan only relevant partitions, improving performance 10x.
+**Benefício:** Queries escaneiam apenas partições relevantes, melhorando a performance em 10x.
 
 ---
 
-### 3. LAG Function for Customer Behavior
+### 3. Função LAG para Comportamento do Cliente
 ```sql
 TIMESTAMP_DIFF(
   created_at, 
@@ -248,69 +248,69 @@ TIMESTAMP_DIFF(
 ) AS days_since_prev_order
 ```
 
-**Benefit:** Calculate average purchase frequency without self-joins.
+**Benefício:** Calcula frequência média de compra sem self-joins.
 
 ---
 
-### 4. APPROX_QUANTILES for Aggregations
+### 4. APPROX_QUANTILES para Agregações
 ```sql
 APPROX_QUANTILES(hours_to_ship, 100)[SAFE_OFFSET(50)] AS median_hours_to_ship
 APPROX_QUANTILES(hours_to_ship, 100)[SAFE_OFFSET(95)] AS p95_hours_to_ship
 ```
 
-**Benefit:** Fast percentile calculations on large datasets.
+**Benefício:** Cálculos rápidos de percentil em grandes datasets.
 
 ---
 
 ## 📊 Dashboard
 
-**Interactive Looker Studio Dashboard:**
+**Dashboard Interativo no Looker Studio:**
 
-[**🔗 Click here to view live dashboard**](https://lookerstudio.google.com/u/0/reporting/3f5e8dde-6737-45af-8922-31273f9de921/page/p_2jccde8nxd)
+[**🔗 Clique aqui para ver o dashboard ao vivo**](https://lookerstudio.google.com/u/0/reporting/3f5e8dde-6737-45af-8922-31273f9de921/page/p_2jccde8nxd)
 
-**Features:**
-- ✅ Customer segmentation (RFM)
-- ✅ Product performance rankings
-- ✅ Monthly revenue trends
-- ✅ Geographic sales distribution
+**Funcionalidades:**
+- ✅ Segmentação de clientes (RFM)
+- ✅ Rankings de performance de produtos
+- ✅ Tendências de receita mensal
+- ✅ Distribuição geográfica de vendas
 
 ---
 
 ## 🔧 Tech Stack
 
-| Component | Technology | Purpose |
+| Componente | Tecnologia | Propósito |
 |-----------|-----------|---------|
-| **Cloud Platform** | Google Cloud Platform | Infrastructure |
-| **Data Warehouse** | BigQuery | Storage & compute |
-| **Orchestration** | Dataform | SQL transformations & scheduling |
-| **Version Control** | Git & GitHub | Code management |
-| **BI Tool** | Looker Studio | Visualization |
-| **Language** | SQL (Standard SQL) | Data transformations |
+| **Cloud Platform** | Google Cloud Platform | Infraestrutura |
+| **Data Warehouse** | BigQuery | Armazenamento e computação |
+| **Orquestração** | Dataform | Transformações SQL e agendamento |
+| **Controle de Versão** | Git & GitHub | Gerenciamento de código |
+| **Ferramenta de BI** | Looker Studio | Visualização |
+| **Linguagem** | SQL (Standard SQL) | Transformações de dados |
 
 ---
 
-## 📈 Project Metrics
+## 📈 Métricas do Projeto
 
-| Metric | Count |
+| Métrica | Contagem |
 |--------|-------|
-| **Bronze Tables** | 4 |
-| **Silver Tables** | 4 |
-| **Gold Tables** | 10 |
+| **Tabelas Bronze** | 4 |
+| **Tabelas Silver** | 4 |
+| **Tabelas Gold** | 10 |
 | **Assertions** | 5 |
-| **Total SQL Files** | 23 |
-| **Lines of Code** | ~3,500+ |
-| **Data Quality Checks** | 50+ |
+| **Total Arquivos SQL** | 23 |
+| **Linhas de Código** | ~3,500+ |
+| **Verificações de Qualidade** | 50+ |
 
 ---
 
-## 📊 SQL Query Examples
+## 📊 Exemplos de Queries SQL
 
-Below are tested BigQuery queries demonstrating how to extract business insights from the Gold layer tables.
+Abaixo estão queries testadas no BigQuery demonstrando como extrair insights de negócio das tabelas da camada Gold.
 
-### Example 1: Top 10 Customers by Lifetime Value
+### Exemplo 1: Top 10 Clientes por Lifetime Value
 
 ```sql
--- Identify high-value customers for VIP programs
+-- Identificar clientes de alto valor para programas VIP
 SELECT
   user_id,
   country,
@@ -331,10 +331,10 @@ LIMIT 10;
 
 ---
 
-### Example 2: Monthly Retention Rate by Cohort
+### Exemplo 2: Taxa de Retenção Mensal por Cohort
 
 ```sql
--- Analyze customer retention patterns over time
+-- Analisar padrões de retenção de clientes ao longo do tempo
 SELECT
   cohort_month,
   months_since_first_order,
@@ -350,10 +350,10 @@ ORDER BY cohort_month DESC, months_since_first_order;
 
 ---
 
-### Example 3: Product Performance by Category
+### Exemplo 3: Performance de Produto por Categoria
 
 ```sql
--- Find best and worst performing products by category
+-- Encontrar melhores e piores produtos por categoria
 WITH category_summary AS (
   SELECT
     category,
@@ -382,10 +382,10 @@ ORDER BY p.category, p.total_revenue DESC;
 
 ---
 
-### Example 4: Daily Operations Dashboard Query
+### Exemplo 4: Query do Dashboard de Operações Diárias
 
 ```sql
--- Monitor fulfillment efficiency and sales trends
+-- Monitorar eficiência de fulfillment e tendências de vendas
 SELECT
   order_date,
   total_orders,
@@ -406,10 +406,10 @@ ORDER BY order_date DESC;
 
 ---
 
-### Example 5: RFM Segmentation Analysis
+### Exemplo 5: Análise de Segmentação RFM
 
 ```sql
--- Analyze customer distribution and revenue by segment
+-- Analisar distribuição de clientes e receita por segmento
 SELECT
   seg.segmento_cliente,
   COUNT(DISTINCT rfm.user_id) AS total_clientes, 
@@ -439,37 +439,37 @@ ORDER BY receita_total DESC;
 
 ---
 
-### Example 6: Executive Summary - Period Comparison
+### Exemplo 6: Executive Summary - Comparação de Períodos
 
 ```sql
--- Get high-level business metrics with period-over-period comparison
+-- Obter métricas de negócio de alto nível com comparação período a período
 SELECT
   period_label,
   report_date,
   
-  -- Revenue metrics
+  -- Métricas de Receita
   ROUND(current_revenue, 2) AS current_revenue,
   ROUND(previous_revenue, 2) AS previous_revenue,
   ROUND(revenue_growth_pct, 2) AS revenue_growth_pct,
   
-  -- Order metrics
+  -- Métricas de Pedidos
   current_orders,
   previous_orders,
   ROUND(orders_growth_pct, 2) AS orders_growth_pct,
   ROUND(avg_order_value, 2) AS avg_order_value,
   
-  -- Customer health
+  -- Saúde do Cliente
   current_active_customers,
   total_customer_base,
   champion_customers,
   at_risk_customers,
   
-  -- Product health
+  -- Saúde do Produto
   total_product_catalog,
   star_products,
   slow_moving_products,
   
-  -- Health scores
+  -- Scores de Saúde
   revenue_health_score,
   operations_health_score
 FROM `datascience-473223.gld_ecommerce.gld_executive_summary`;
@@ -477,121 +477,121 @@ FROM `datascience-473223.gld_ecommerce.gld_executive_summary`;
 
 ---
 
-## ⚙️ How to Run
+## ⚙️ Como Executar
 
-### Prerequisites
-1. GCP account with BigQuery enabled
-2. Dataform workspace configured
-3. Service account with permissions:
+### Pré-requisitos
+1. Conta GCP com BigQuery habilitado
+2. Workspace Dataform configurado
+3. Service account com permissões:
    - `roles/bigquery.dataEditor`
    - `roles/bigquery.jobUser`
 
-### Execution Steps
+### Passos de Execução
 
-1. **Clone the repository:**
+1. **Clonar o repositório:**
    ```bash
    git clone https://github.com/yourusername/ga4-analytics-pipeline-portfolio.git
    ```
 
-2. **Configure Dataform workspace:**
-   - Update `workflow_settings.yaml` with your GCP project ID
-   - Set default datasets for Bronze/Silver/Gold layers
+2. **Configurar workspace Dataform:**
+   - Atualizar `workflow_settings.yaml` com seu ID de projeto GCP
+   - Definir datasets padrão para camadas Bronze/Silver/Gold
 
-3. **Run the pipeline:**
-   - In Dataform UI, click **"Start Execution"**
-   - Select **"All actions"**
-   - Dataform will execute tables in dependency order
+3. **Rodar o pipeline:**
+   - Na UI do Dataform, clique em **"Start Execution"**
+   - Selecione **"All actions"**
+   - O Dataform executará as tabelas em ordem de dependência
 
-**Execution Order:**
+**Ordem de Execução:**
 ```
 Bronze (4 tables) → Silver (4 tables) → Gold Tier 1 (5 tables) → Gold Tier 2 (5 tables)
 ```
 
 ---
 
-## 🎓 Key Learnings & Design Decisions
+## 🎓 Principais Aprendizados & Decisões de Design
 
-### 1. Why Incremental Over Full Refresh?
-**Decision:** Use 7-day incremental window for fact tables.
+### 1. Por que Incremental vs Full Refresh?
+**Decisão:** Usar janela incremental de 7 dias para tabelas fato.
 
-**Rationale:**
-- Reduces query costs by 95%
-- Handles late-arriving data (orders updated post-creation)
-- Balances freshness with performance
+**Racional:**
+- Reduz custos de query em 95%
+- Lida com dados que chegam atrasados (pedidos atualizados pós-criação)
+- Equilibra atualização com performance
 
-**Trade-off:** Slightly more complex logic vs. massive cost savings.
-
----
-
-### 2. Why APPROX_QUANTILES vs PERCENTILE_CONT?
-**Decision:** Use `APPROX_QUANTILES` for median/percentile calculations.
-
-**Rationale:**
-- `PERCENTILE_CONT` is an analytic function (can't be used with `GROUP BY`)
-- `APPROX_QUANTILES` is an aggregate function (works in GROUP BY)
-- 99.9% accuracy is sufficient for business decisions
-
-**Impact:** Enabled efficient aggregations on partitioned tables.
+**Trade-off:** Lógica ligeiramente mais complexa vs. economia massiva de custos.
 
 ---
 
-### 3. Why Separate Gold Tables Instead of Views?
-**Decision:** Materialize Gold tables instead of using views.
+### 2. Por que APPROX_QUANTILES vs PERCENTILE_CONT?
+**Decisão:** Usar `APPROX_QUANTILES` para cálculos de mediana/percentil.
 
-**Rationale:**
-- Pre-aggregated tables = instant dashboard load times
-- Views recalculate on every query (slow for complex joins)
-- Tables enable partitioning/clustering for cost optimization
+**Racional:**
+- `PERCENTILE_CONT` é uma função analítica (não pode ser usada com `GROUP BY`)
+- `APPROX_QUANTILES` é uma função de agregação (funciona em GROUP BY)
+- Precisão de 99.9% é suficiente para decisões de negócio
 
-**Trade-off:** Slight storage cost vs. 10x query performance improvement.
+**Impacto:** Permitiu agregações eficientes em tabelas particionadas.
 
 ---
 
-## 🚧 Known Issues & Future Improvements
+### 3. Por que Tabelas Gold Separadas em vez de Views?
+**Decisão:** Materializar tabelas Gold em vez de usar views.
 
-### Current Limitations
-1. **Assertion Failures:** Public dataset contains some invalid records:
-   - ~2% products with negative margins
-   - ~0.5% users with invalid emails
+**Racional:**
+- Tabelas pré-agregadas = tempo de carregamento instantâneo no dashboard
+- Views recalculam a cada query (lento para joins complexos)
+- Tabelas permitem partitioning/clustering para otimização de custo
+
+**Trade-off:** Leve custo de armazenamento vs. melhoria de 10x na performance de query.
+
+---
+
+## 🚧 Problemas Conhecidos & Melhorias Futuras
+
+### Limitações Atuais
+1. **Falhas de Assertion:** O dataset público contém alguns registros inválidos:
+   - ~2% produtos com margens negativas
+   - ~0.5% usuários com e-mails inválidos
    
-   **Status:** These are data quality issues in the source, not code bugs. Assertions are working as designed.
+   **Status:** Estes são problemas de qualidade de dados na fonte, não bugs de código. Assertions estão funcionando como projetado.
 
-2. **Manual Table Drops:** BigQuery doesn't support altering partition specs. To change partitioning:
+2. **Drops Manuais de Tabela:** BigQuery não suporta alterar especificações de partição. Para mudar o particionamento:
    ```sql
    DROP TABLE IF EXISTS `project.dataset.table_name`;
    ```
 
-### Future Enhancements
-- [ ] Implement dbt tests migration
-- [ ] Add GA4 event stream processing
-- [ ] Create anomaly detection alerts
-- [ ] Implement slow-changing dimensions (SCD Type 2)
-- [ ] Add cost attribution analysis
+### Melhorias Futuras
+- [ ] Implementar migração de testes dbt
+- [ ] Adicionar processamento de stream de eventos GA4
+- [ ] Criar alertas de detecção de anomalias
+- [ ] Implementar slow-changing dimensions (SCD Type 2)
+- [ ] Adicionar análise de atribuição de custos
 
 ---
 
-## 🤝 Contributing
+## 🤝 Contribuindo
 
-This is a portfolio project, but feedback is welcome! If you spot issues or have suggestions:
+Este é um projeto de portfólio, mas feedback é bem-vindo! Se você encontrar problemas ou tiver sugestões:
 
-1. Open an issue describing the problem/enhancement
-2. For code changes, fork the repo and submit a PR
-3. Ensure your code follows the existing SQL style guide
+1. Abra uma issue descrevendo o problema/melhoria
+2. Para mudanças de código, faça um fork do repo e submeta um PR
+3. Garanta que seu código siga o guia de estilo SQL existente
 
 ---
 
-## 📝 SQL Style Guide
+## 📝 Guia de Estilo SQL
 
-This project follows Google's SQL Style Guide with additions:
+Este projeto segue o Google's SQL Style Guide com adições:
 
-**Key Principles:**
-- ✅ Semantic column naming (`order_created_at` not `created_at`)
-- ✅ Use `UPPER()` for categorical fields consistency
-- ✅ Always use `SAFE_DIVIDE()` to handle division by zero
-- ✅ Comment complex business logic inline
-- ✅ Use CTEs for readability (not subqueries)
+**Princípios Chave:**
+- ✅ Naneamento semântico de colunas (`order_created_at` não `created_at`)
+- ✅ Usar `UPPER()` para consistência de campos categóricos
+- ✅ Sempre usar `SAFE_DIVIDE()` para lidar com divisão por zero
+- ✅ Comentar lógica de negócio complexa inline
+- ✅ Usar CTEs para legibilidade (não subqueries)
 
-**Example:**
+**Exemplo:**
 ```sql
 -- ✅ GOOD
 SELECT
@@ -606,27 +606,27 @@ select order_id, status, revenue/orders as aov from orders
 
 ---
 
-## 📄 License
+## 📄 Licença
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
----
-
-## 👤 Author
-
-**Your Name**
-- LinkedIn: [your-profile](https://linkedin.com/in/yourprofile)
-- Portfolio: [your-website.com](https://yourwebsite.com)
-- Email: your.email@example.com
+Este projeto está licenciado sob a MIT License - veja o arquivo [LICENSE](LICENSE) para detalhes.
 
 ---
 
-## 🙏 Acknowledgments
+## 👤 Autor
 
-- **Data Source:** Google BigQuery public dataset `thelook_ecommerce`
-- **Architecture Pattern:** Databricks Medallion Architecture
-- **Inspiration:** Modern data engineering best practices from dbt, Airflow, and Dataform communities
+**Seu Nome**
+- LinkedIn: [seu-perfil](https://linkedin.com/in/seu-perfil)
+- Portfólio: [seu-website.com](https://seuwebsite.com)
+- Email: seu.email@exemplo.com
 
 ---
 
-**⭐ If this project helped you learn something new, please consider giving it a star!**
+## 🙏 Agradecimentos
+
+- **Fonte de Dados:** Google BigQuery public dataset `thelook_ecommerce`
+- **Padrão de Arquitetura:** Databricks Medallion Architecture
+- **Inspiração:** Melhores práticas modernas de engenharia de dados das comunidades dbt, Airflow e Dataform
+
+---
+
+**⭐ Se este projeto te ajudou a aprender algo novo, considere dar uma estrela!**
