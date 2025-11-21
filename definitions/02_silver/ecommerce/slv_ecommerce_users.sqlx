@@ -8,7 +8,29 @@ config {
     clusterBy: ["country", "traffic_source"]
   },
   tags: ["silver", "ecommerce", "users"],
-  description: "Camada Silver de Usuários: Dados demográficos limpos e segmentação."
+  description: "Camada Silver de Usuários: Dados demográficos limpos e segmentação.",
+  columns: {
+    full_name: {
+      description: "Nome completo do usuário (PII)",
+      bigqueryPolicyTags: [dataform.projectConfig.vars.pii_policy_tag]
+    },
+    email: {
+      description: "E-mail do usuário (PII)",
+      bigqueryPolicyTags: [dataform.projectConfig.vars.pii_policy_tag]
+    },
+    postal_code: {
+      description: "Código postal (PII)",
+      bigqueryPolicyTags: [dataform.projectConfig.vars.pii_policy_tag]
+    },
+    latitude: {
+      description: "Latitude (PII - Geolocalização precisa)",
+      bigqueryPolicyTags: [dataform.projectConfig.vars.pii_policy_tag]
+    },
+    longitude: {
+      description: "Longitude (PII - Geolocalização precisa)",
+      bigqueryPolicyTags: [dataform.projectConfig.vars.pii_policy_tag]
+    }
+  }
 }
 
 /*

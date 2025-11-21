@@ -13,6 +13,10 @@ vars:
   bronze_ecommerce_bq: "brz_ecommerce"
   silver_ecommerce_bq: "slv_ecommerce"
   gold_ecommerce_bq: "gld_ecommerce"
+  
+  # LGPD / Governance
+  # REPLACE WITH YOUR ACTUAL POLICY TAG ID (e.g., projects/your-project/locations/us/taxonomies/123/policyTags/456)
+  pii_policy_tag: "projects/datascience-473223/locations/us/taxonomies/5464689907534065720/policyTags/projects/datascience-473223/locations/us/taxonomies/5464689907534065720/policyTags/311878649262498434"
 
   # Janela para cargas incrementais (útil para o futuro)
   incremental_window_days: "7"

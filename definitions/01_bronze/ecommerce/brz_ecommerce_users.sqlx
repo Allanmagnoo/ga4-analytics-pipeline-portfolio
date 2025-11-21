@@ -8,7 +8,41 @@ config {
         clusterBy: ["user_country", "user_state", "user_traffic_source"]
     },
     tags: ["bronze", "ecommerce", "users", "dimension"],
-    description: "Tabela incremental de usuários da camada Bronze - Dados brutos do thelook_ecommerce"
+    description: "Tabela incremental de usuários da camada Bronze - Dados brutos do thelook_ecommerce",
+    columns: {
+        user_first_name: {
+            description: "Primeiro nome do usuário (PII)",
+            bigqueryPolicyTags: [dataform.projectConfig.vars.pii_policy_tag]
+        },
+        user_last_name: {
+            description: "Sobrenome do usuário (PII)",
+            bigqueryPolicyTags: [dataform.projectConfig.vars.pii_policy_tag]
+        },
+        user_full_name: {
+            description: "Nome completo do usuário (PII)",
+            bigqueryPolicyTags: [dataform.projectConfig.vars.pii_policy_tag]
+        },
+        user_email: {
+            description: "Endereço de e-mail do usuário (PII)",
+            bigqueryPolicyTags: [dataform.projectConfig.vars.pii_policy_tag]
+        },
+        user_street_address: {
+            description: "Endereço da rua do usuário (PII)",
+            bigqueryPolicyTags: [dataform.projectConfig.vars.pii_policy_tag]
+        },
+        user_postal_code: {
+            description: "Código postal do usuário (PII)",
+            bigqueryPolicyTags: [dataform.projectConfig.vars.pii_policy_tag]
+        },
+        user_latitude: {
+            description: "Latitude da localização do usuário (PII - Geolocalização precisa)",
+            bigqueryPolicyTags: [dataform.projectConfig.vars.pii_policy_tag]
+        },
+        user_longitude: {
+            description: "Longitude da localização do usuário (PII - Geolocalização precisa)",
+            bigqueryPolicyTags: [dataform.projectConfig.vars.pii_policy_tag]
+        }
+    }
 }
 
 /*
